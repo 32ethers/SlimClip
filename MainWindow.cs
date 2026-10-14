@@ -32,6 +32,7 @@ internal sealed class MainWindow : Window
     private readonly System.Windows.Forms.NotifyIcon _tray;
     private CancellationTokenSource? _current;
     private bool _exitRequested;
+    private bool _warnedBackups;
     private int _pending;
     private readonly TextBlock _message = new() { Text = "就绪。右键视频文件，选择压缩档位或预估。", Margin = new Thickness(8) };
 
@@ -86,6 +87,8 @@ internal sealed class MainWindow : Window
 
     private void WarnAboutBackups()
     {
+        if (_warnedBackups) return;
+        _warnedBackups = true;
         foreach (var item in RecoveryJournal.FindBackups())
         {
             if (File.Exists(item.Source))

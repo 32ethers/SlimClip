@@ -96,8 +96,21 @@ jobs:
           # cmd.exe imports the MSVC and Windows SDK environment for build.ps1.
           $build = Join-Path $env:GITHUB_WORKSPACE 'build.ps1'
           $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing "{5}"' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version, $signing
-          & cmd.exe /d /s /c $command
-          if ($LASTEXITCODE -ne 0) { throw 'Full MSIX build or test signing failed. Unsigned intermediate may still be uploaded.' }
+          $log = Join-Path $env:RUNNER_TEMP 'SlimClip-build.log'
+          Start-Transcript -Path $log -Force | Out-Null
+          try {
+            & cmd.exe /d /s /c $command
+            $buildExit = $LASTEXITCODE
+          } finally { Stop-Transcript | Out-Null }
+          if ($buildExit -ne 0) {
+            # Surface compiler/packer errors in public check annotations.
+            $tail = @(Get-Content -LiteralPath $log -Tail 80)
+            foreach ($line in @($tail | Where-Object { $_ -match 'error|fatal|failed|cannot|Missing|Exception|错误|失败' } | Select-Object -Last 12)) {
+              $safe = $line -replace '[%\r\n]', ' '
+              Write-Host ('::error::' + $safe.Substring(0, [Math]::Min(400, $safe.Length)))
+            }
+            throw 'Full MSIX build or test signing failed. See compiler/packer annotations above.'
+          }
 
       - name: Publish UNSIGNED intermediate (not installable)
         if: github.event_name == 'workflow_dispatch' && always()

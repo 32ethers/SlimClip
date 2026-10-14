@@ -18,6 +18,6 @@ Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**当�
 
 ## 本地可运行的有限测试
 
-使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 9 个实际引擎集成测试，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**当前机器没有 .NET 8 SDK、MSVC 和 Windows SDK，尚未运行 C# 集成测试、生成 MSIX 或实机验证右键菜单。**
+使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 9 个实际引擎集成测试，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**GitHub Actions Windows 首轮已完成 .NET 引擎集成测试与 FFmpeg 烟测；当前机器没有 .NET 8 SDK、MSVC 和 Windows SDK，仍未生成安装包或在 Windows 11 实机验证右键菜单。**
 
 设计依据：[微软的新式文件菜单](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer)和[MSIX 签名说明](https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide)。

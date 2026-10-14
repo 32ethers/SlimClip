@@ -200,7 +200,8 @@ STDMETHODIMP CommandEnumerator::Next(ULONG requested, IExplorerCommand** command
         commands[done] = new (std::nothrow) MenuCommand(index);
         if (!commands[done])
         {
-            if (fetched) *fetched = done;
+            for (ULONG i = 0; i < done; ++i) { commands[i]->Release(); commands[i] = nullptr; }
+            if (fetched) *fetched = 0;
             return E_OUTOFMEMORY;
         }
         ++index;
