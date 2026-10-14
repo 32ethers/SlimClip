@@ -12,13 +12,13 @@ Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**11 �
 
 ## 安装与卸载
 
-计划交付**完整 MSIX 安装包**（含主程序、Windows 11 原生菜单 DLL、FFmpeg/ffprobe），从 Windows「设置 → 应用 → 已安装的应用」卸载并移除右键菜单。源码不等于安装包；测试版 MSIX 需显式信任公钥测试证书，不能把签名私钥公开或静默安装证书。签名、安装及卸载细节参见 [packaging/INSTALL.md](packaging/INSTALL.md)；实机检查条目见 [Windows 11 验收清单](tests/windows11-acceptance.md)。
+计划交付**完整 MSIX 安装包**（含主程序、Windows 11 原生菜单 DLL、FFmpeg/ffprobe），从 Windows「设置 → 应用 → 已安装的应用」卸载并移除右键菜单。源码不等于安装包；**仅私有仓库手动运行 CI 才上传测试包及公钥证书**，公开仓库禁止上传内置 FFmpeg 的包。测试版 MSIX 需显式信任公钥测试证书，不能把签名私钥公开或静默安装证书。签名、安装及卸载细节参见 [packaging/INSTALL.md](packaging/INSTALL.md)；实机检查条目见 [Windows 11 验收清单](tests/windows11-acceptance.md)。
 
 采用 WPF/.NET 8 主程序与原生 C++ `IExplorerCommand` 菜单 DLL，GitHub Actions 在 Windows runner 上构建；**用户电脑不需要 Visual Studio**。请勿用传统注册表菜单冒充 Windows 11 新式菜单。
 
 ## 本地可运行的有限测试
 
-使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 11 个实际引擎集成测试，均已在 Windows CI 通过，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**[GitHub Actions 第十轮](https://github.com/32ethers/SlimClip/actions/runs/38589585372)已通过 11 项引擎测试、FFmpeg 烟测、原生菜单 DLL 编译、完整 MSIX 测试签名及 Windows Server 2025 一次性 runner 的安装/卸载与证书清理。CI 不公开上传包含 FFmpeg 的包；Windows 11 新式右键菜单、双击安装及从系统设置卸载仍未实机验证。**
+使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 11 个实际引擎集成测试，均已在 Windows CI 通过，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**[GitHub Actions 第十一轮](https://github.com/32ethers/SlimClip/actions/runs/38607273909)已通过 11 项引擎测试、FFmpeg 烟测、原生菜单 DLL 编译及直接调用的 COM 菜单自测、完整 MSIX 测试签名及 Windows Server 2025 一次性 runner 的安装/卸载与证书清理。CI 不公开上传包含 FFmpeg 的包；Windows 11 新式右键菜单、双击安装及从系统设置卸载仍未实机验证。**
 
 ## 开源许可
 

@@ -124,7 +124,7 @@ jobs:
           }
 
       # This Windows Server runner can exercise the MSIX deployment APIs, but
-      # cannot demonstrate the Windows 11 Explorer menu UI. No artifacts escape CI.
+      # cannot demonstrate the Windows 11 Explorer menu UI. Push builds never upload packages.
       - name: Install and uninstall signed MSIX on disposable runner
         run: |
           $ErrorActionPreference = 'Stop'
@@ -135,3 +135,20 @@ jobs:
             Write-Host ('::error::Install/uninstall: ' + $detail.Substring(0, [Math]::Min(800, $detail.Length)))
             throw
           }
+
+      # Only an explicit manual run in a PRIVATE repository may upload the GPLv3
+      # FFmpeg-containing package. Never upload a private key or a public-repo binary.
+      - name: Upload PRIVATE test-signed MSIX and public certificate
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private == true && success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimClip-PRIVATE-TEST-SIGNED-TRUST-CERT-FIRST
+          path: |
+            artifacts/SlimClip.test.msix
+            artifacts/SlimClip.test.cer
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Explain skipped upload in public repository
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private != true }}
+        run: Write-Host '::notice::Public repository: test MSIX containing FFmpeg is deliberately not uploaded.'
