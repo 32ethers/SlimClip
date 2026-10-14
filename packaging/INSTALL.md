@@ -1,14 +1,14 @@
 # SlimClip Windows 11 安装、卸载与签名
 
-> **状态：[Windows CI 第六轮](https://github.com/32ethers/SlimClip/actions/runs/38571220801)已成功生成完整无签名 MSIX；尚未签名、真实安装或验证资源管理器。** 本仓库的 `build.ps1` 会生成完整 MSIX，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，实测构建在 GitHub Windows runner 上完成。
+> **状态：[Windows CI 第七轮](https://github.com/32ethers/SlimClip/actions/runs/38573147741)已成功生成完整无签名 MSIX；尚未签名、真实安装或验证资源管理器。** 本仓库的 `build.ps1` 会生成完整 MSIX，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，实测构建在 GitHub Windows runner 上完成。
 
-## GitHub Actions 生成测试包
+## GitHub Actions 构建与隔离安装测试
 
-1. 推送 `main` 会自动运行源码构建/测试，**不会公开上传包含 FFmpeg 的 MSIX**。需要测试安装包时，仓库所有者可在 Actions 手动运行 `Windows 11 MSIX test build`（workflow_dispatch）。仓库工作流固定使用上游版本化的 FFmpeg Essentials ZIP URL 和公开 SHA-256；升级 FFmpeg 需审查来源并修改工作流提交。ZIP 必须包含 `ffmpeg.exe`/`ffprobe.exe` 和许可文本，CI 解压前核对哈希；找不到许可文本即失败。
-2. Workflow 在 Windows runner 安装 .NET 8 SDK，使用 runner 的 Visual Studio C++/Windows SDK 构建；`build.ps1` 把所有运行文件和视觉资产放进同一个完整 MSIX，而非依赖外部程序目录。每次 Actions run number 作为 MSIX 的构建版本编号；测试证书每次运行都重新生成，测试另一版本前需重新明确核验、信任新公钥，是否可原位升级仍需实机验证（必要时先卸载旧测试版）。正式发行应使用稳定的受信任发布者身份。
-3. **仅手动触发**并构建成功时会上传两组**明确区分**的产物：`SlimClip-UNSIGNED-NOT-INSTALLABLE` 仅作构建中间产物，**无法安装**；`SlimClip-TEST-SIGNED-TRUST-PUBLIC-CERT-FIRST` 包含 `SlimClip.test.msix` 和公开的 `SlimClip.test.cer`。若签名失败，workflow 失败，至多留下明确标记的 unsigned 包，不把 unsigned 叫作安装包。
+1. 推送 `main` 或手动触发都会测试源码、生成完整 MSIX，并用临时自签证书签名；**目前不上传包含 FFmpeg 的 MSIX 或证书**。工作流固定上游版本化的 FFmpeg Essentials ZIP URL 与 SHA-256，解压前校验哈希，并要求保留许可证/README。升级需审查来源与提交校验值。
+2. Windows 2025 CI runner 的独立步骤会**显式**在一次性机器上导入本次测试证书，尝试安装签名包，核对包身份，然后卸载并移除所导入的精确证书。这不是在用户电脑导入证书，也不能代替 Windows 11 真实资源管理器菜单检查；只有该步骤实际通过才可称 CI 安装/卸载通过。正式发行还需稳定的受信任签名身份。
+3. 每次 run number 作为包构建编号；证书每次重新生成。当前 Actions 无可下载测试安装包，下面的用户安装说明仅适用于日后完成第三方许可核查、按需生成并由知情测试者取得的匹配 `.msix`/`.cer`，**不能拿未签名包当安装包**。
 
-当前固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)与[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；版本号和校验值要成对更新。该上游明确称其 FFmpeg 二进制为 **GPLv3 静态构建**。**本仓库公开；手动 workflow_dispatch 上传的测试 MSIX 也会公开可下载。**随包携带原发行版许可证和 URL/SHA-256 **不自动满足** GPLv3 对应源码、构建脚本及相关库的全部分发义务；完成许可与相应源码提供方案核查前，不要公开上传测试包。若仅在个人 Windows 11 测试机验收，可先使用私有构建仓库或本地受控打包；勿将私钥提交到任何仓库。
+固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)和[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；该二进制是 **GPLv3 静态构建**。原始 ZIP/许可证/FFmpeg 主项目源码链接**不自动等于**该成品所有静态依赖、补丁与构建脚本的完整对应源码。[FFmpeg 官方合规说明](https://ffmpeg.org/legal.html)和[GPLv3 第 6 节](https://www.gnu.org/licenses/gpl-3.0.en.html)要求核查随公开二进制提供的相应源码。完成该核查及等效源码获取方式前，不公开上传此完整 MSIX；独立进程运行 FFmpeg 不会消除对所分发 FFmpeg 自身的义务。
 
 ## 安装测试包（仅在知情测试机上）
 

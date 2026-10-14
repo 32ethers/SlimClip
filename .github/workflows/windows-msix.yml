@@ -1,8 +1,8 @@
 name: Windows 11 MSIX test build
 
 # Pin a versioned upstream FFmpeg archive + upstream SHA-256. Updating the
-# binary requires an explicit source review and commit. Push builds do NOT publish
-# packages containing FFmpeg; manual dispatch is required for test-package artifacts.
+# binary requires an explicit source review and commit. No build uploads
+# GPL FFmpeg-containing binaries until Corresponding Source is verified.
 on:
   push:
     branches: [main]
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2025
     timeout-minutes: 45
     defaults:
       run:
@@ -99,7 +99,9 @@ jobs:
           $developerCmd = Join-Path $installation 'Common7\Tools\VsDevCmd.bat'
           if (-not (Test-Path -LiteralPath $developerCmd)) { throw 'VsDevCmd.bat unavailable' }
           $version = '1.0.' + $env:GITHUB_RUN_NUMBER + '.0'
-          $signing = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { 'Test' } else { 'Unsigned' }
+          # Sign only on this disposable runner. The private key stays local;
+          # neither the MSIX nor its certificate is uploaded to the public repository.
+          $signing = 'Test'
           # cmd.exe imports the MSVC and Windows SDK environment for build.ps1.
           $build = Join-Path $env:GITHUB_WORKSPACE 'build.ps1'
           $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing "{5}"' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version, $signing
@@ -121,22 +123,9 @@ jobs:
             throw 'Full MSIX build failed; see final build-line annotations above.'
           }
 
-      - name: Publish UNSIGNED intermediate (not installable)
-        if: github.event_name == 'workflow_dispatch' && always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: SlimClip-UNSIGNED-NOT-INSTALLABLE
-          path: artifacts/SlimClip.unsigned.msix
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Publish TEST-signed MSIX and PUBLIC certificate
-        if: github.event_name == 'workflow_dispatch' && success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: SlimClip-TEST-SIGNED-TRUST-PUBLIC-CERT-FIRST
-          path: |
-            artifacts/SlimClip.test.msix
-            artifacts/SlimClip.test.cer
-          if-no-files-found: error
-          retention-days: 14
+      # This Windows Server runner can exercise the MSIX deployment APIs, but
+      # cannot demonstrate the Windows 11 Explorer menu UI. No artifacts escape CI.
+      - name: Install and uninstall signed MSIX on disposable runner
+        run: |
+          & .\tests\msix-install-smoke.ps1 -PackagePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.msix') -CertificatePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.cer')
+          if ($LASTEXITCODE -ne 0) { throw 'Signed MSIX install/uninstall smoke test failed' }
