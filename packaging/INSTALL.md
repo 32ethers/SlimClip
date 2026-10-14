@@ -8,7 +8,7 @@
 2. Windows 2025 CI runner 的独立步骤会**显式**在一次性机器上导入本次测试证书，尝试安装签名包，核对包身份，然后卸载并移除所导入的精确证书。这不是在用户电脑导入证书，也不能代替 Windows 11 真实资源管理器菜单检查；只有该步骤实际通过才可称 CI 安装/卸载通过。正式发行还需稳定的受信任签名身份。
 3. 每次 run number 作为包构建编号；证书每次重新生成。当前 Actions 无可下载测试安装包，下面的用户安装说明仅适用于日后完成第三方许可核查、按需生成并由知情测试者取得的匹配 `.msix`/`.cer`，**不能拿未签名包当安装包**。
 
-固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)和[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；该二进制是 **GPLv3 静态构建**。原始 ZIP/许可证/FFmpeg 主项目源码链接**不自动等于**该成品所有静态依赖、补丁与构建脚本的完整对应源码。[FFmpeg 官方合规说明](https://ffmpeg.org/legal.html)和[GPLv3 第 6 节](https://www.gnu.org/licenses/gpl-3.0.en.html)要求核查随公开二进制提供的相应源码。完成该核查及等效源码获取方式前，不公开上传此完整 MSIX；独立进程运行 FFmpeg 不会消除对所分发 FFmpeg 自身的义务。
+固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)和[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；该二进制是 **GPLv3 静态构建**。原始 ZIP/许可证/FFmpeg 主项目源码链接**不自动等于**该成品所有静态依赖、补丁与构建脚本的完整对应源码。[FFmpeg 官方合规说明](https://ffmpeg.org/legal.html)和[GPLv3 第 6 节](https://www.gnu.org/licenses/gpl-3.0.en.html)要求核查随公开二进制提供的相应源码。完成[对应源码审计清单](FFMPEG-SOURCE-AUDIT.md)及等效源码获取方式前，不公开上传此完整 MSIX；独立进程运行 FFmpeg 不会消除对所分发 FFmpeg 自身的义务。
 
 ## 安装测试包（仅在知情测试机上）
 

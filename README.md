@@ -22,6 +22,6 @@ Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**引�
 
 ## 开源许可
 
-SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。随包使用的第三方 FFmpeg/ffprobe **不是 MIT**：所选 [Gyan 构建](https://www.gyan.dev/ffmpeg/builds/)标注 GPLv3；其许可证与已核实的来源信息另存于包内 `licenses/FFmpeg/`。公开提供包含该静态二进制的 MSIX 前，仍须核实并提供完整对应源码、依赖和构建脚本；仅开源 SlimClip 自身不能替代这项义务。详见 [安装说明](packaging/INSTALL.md)。
+SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。随包使用的第三方 FFmpeg/ffprobe **不是 MIT**：所选 [Gyan 构建](https://www.gyan.dev/ffmpeg/builds/)标注 GPLv3；其许可证与已核实的来源信息另存于包内 `licenses/FFmpeg/`。公开提供包含该静态二进制的 MSIX 前，仍须核实并提供完整对应源码、依赖和构建脚本；仅开源 SlimClip 自身不能替代这项义务。详见 [对应源码审计清单](packaging/FFMPEG-SOURCE-AUDIT.md)与[安装说明](packaging/INSTALL.md)。
 
 设计依据：[微软的新式文件菜单](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer)和[MSIX 签名说明](https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide)。
