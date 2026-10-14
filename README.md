@@ -12,7 +12,7 @@ Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**当�
 
 ## 安装与卸载
 
-计划交付**完整 MSIX 安装包**（含主程序、Windows 11 原生菜单 DLL、FFmpeg/ffprobe），从 Windows「设置 → 应用 → 已安装的应用」卸载并移除右键菜单。源码不等于安装包；测试版 MSIX 需显式信任公钥测试证书，不能把签名私钥公开或静默安装证书。签名、安装及卸载细节参见 [packaging/INSTALL.md](packaging/INSTALL.md)。
+计划交付**完整 MSIX 安装包**（含主程序、Windows 11 原生菜单 DLL、FFmpeg/ffprobe），从 Windows「设置 → 应用 → 已安装的应用」卸载并移除右键菜单。源码不等于安装包；测试版 MSIX 需显式信任公钥测试证书，不能把签名私钥公开或静默安装证书。签名、安装及卸载细节参见 [packaging/INSTALL.md](packaging/INSTALL.md)；实机检查条目见 [Windows 11 验收清单](tests/windows11-acceptance.md)。
 
 采用 WPF/.NET 8 主程序与原生 C++ `IExplorerCommand` 菜单 DLL，GitHub Actions 在 Windows runner 上构建；**用户电脑不需要 Visual Studio**。请勿用传统注册表菜单冒充 Windows 11 新式菜单。
 

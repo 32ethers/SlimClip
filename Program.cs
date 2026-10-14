@@ -70,7 +70,7 @@ internal static class Program
                 {
                     var command = JsonSerializer.Deserialize<Command>(line);
                     if (command is not null && !window.Dispatcher.HasShutdownStarted)
-                        window.Dispatcher.BeginInvoke(() => window.Accept(command));
+                        _ = window.Dispatcher.BeginInvoke(() => window.Accept(command));
                 }
             }
             catch (Exception ex) when (ex is IOException or ObjectDisposedException or JsonException or System.Threading.Tasks.TaskCanceledException)

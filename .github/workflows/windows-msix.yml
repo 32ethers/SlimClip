@@ -84,6 +84,11 @@ jobs:
           FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
           FFMPEG_LICENSE_DIR: ${{ steps.ffmpeg.outputs.license_dir }}
         run: |
+          trap {
+            $safeError = $_.Exception.Message -replace '[%\r\n]', ' '
+            Write-Host ('::error::Build step exception: ' + $safeError.Substring(0, [Math]::Min(500, $safeError.Length)))
+            break
+          }
           $ErrorActionPreference = 'Stop'
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
           if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio build tools unavailable on runner' }
@@ -97,19 +102,21 @@ jobs:
           $build = Join-Path $env:GITHUB_WORKSPACE 'build.ps1'
           $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing "{5}"' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version, $signing
           $log = Join-Path $env:RUNNER_TEMP 'SlimClip-build.log'
-          Start-Transcript -Path $log -Force | Out-Null
-          try {
-            & cmd.exe /d /s /c $command
-            $buildExit = $LASTEXITCODE
-          } finally { Stop-Transcript | Out-Null }
+          $redirected = $command + ' 1> "' + $log + '" 2>&1'
+          & cmd.exe /d /s /c $redirected
+          $buildExit = $LASTEXITCODE
+          if (-not (Test-Path -LiteralPath $log)) { throw "Build command created no log; cmd exit code: $buildExit" }
+          $tail = @(Get-Content -LiteralPath $log -Tail 80)
+          $tail | ForEach-Object { Write-Host $_ }
           if ($buildExit -ne 0) {
-            # Surface compiler/packer errors in public check annotations.
-            $tail = @(Get-Content -LiteralPath $log -Tail 80)
-            foreach ($line in @($tail | Where-Object { $_ -match 'error|fatal|failed|cannot|Missing|Exception|错误|失败' } | Select-Object -Last 12)) {
+            # Mark the final build lines as check annotations even if the failure
+            # message does not contain an English word such as 'error'.
+            foreach ($line in @($tail | Select-Object -Last 15)) {
+              if (-not $line.Trim()) { continue }
               $safe = $line -replace '[%\r\n]', ' '
               Write-Host ('::error::' + $safe.Substring(0, [Math]::Min(400, $safe.Length)))
             }
-            throw 'Full MSIX build or test signing failed. See compiler/packer annotations above.'
+            throw 'Full MSIX build failed; see final build-line annotations above.'
           }
 
       - name: Publish UNSIGNED intermediate (not installable)

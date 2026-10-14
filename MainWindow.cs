@@ -31,6 +31,7 @@ internal sealed class MainWindow : Window
     private readonly CancellationTokenSource _lifetime = new();
     private readonly System.Windows.Forms.NotifyIcon _tray;
     private CancellationTokenSource? _current;
+    private Task? _worker;
     private bool _exitRequested;
     private bool _warnedBackups;
     private int _pending;
@@ -82,7 +83,7 @@ internal sealed class MainWindow : Window
         };
         // Queue worker starts inside a Dispatcher operation after the message loop is running.
         // Its await continuations must stay on the WPF UI thread when updating bound jobs.
-        Dispatcher.BeginInvoke((Action)(() => { _ = WorkAsync(); }));
+        Dispatcher.BeginInvoke((Action)(() => { _worker = WorkAsync(); }));
     }
 
     private void WarnAboutBackups()
@@ -105,8 +106,9 @@ internal sealed class MainWindow : Window
         }
     }
 
-    private void ExitApplication()
+    private async void ExitApplication()
     {
+        if (_exitRequested) return;
         if (_current is not null || _pending > 0)
         {
             var choice = MessageBox.Show(this, "退出会取消当前任务，并丢弃未开始的队列。确定退出吗？",
@@ -114,7 +116,10 @@ internal sealed class MainWindow : Window
             if (choice != MessageBoxResult.Yes) return;
         }
         _exitRequested = true;
-        Close();
+        _message.Text = "正在取消任务并清理临时文件…";
+        _current?.Cancel(); _lifetime.Cancel(); _queue.Writer.TryComplete();
+        try { if (_worker is not null) await _worker; }
+        finally { Close(); }
     }
 
     private void ShowWindow()
