@@ -1,18 +1,16 @@
 name: Windows 11 MSIX test build
 
-# Use a pinned FFmpeg archive and independently supplied SHA-256. This prevents
-# silently downloading an ever-changing 'latest' binary into signed packages.
+# Pin a versioned upstream FFmpeg archive + upstream SHA-256. Updating the
+# binary requires an explicit source review and commit. Push builds do NOT publish
+# packages containing FFmpeg; manual dispatch is required for test-package artifacts.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      ffmpeg_zip_url:
-        description: HTTPS URL of an x64 FFmpeg ZIP containing ffmpeg.exe, ffprobe.exe and its license notices
-        required: true
-        type: string
-      ffmpeg_zip_sha256:
-        description: SHA-256 of that exact ZIP (64 hexadecimal digits)
-        required: true
-        type: string
+
+env:
+  FFMPEG_URL: https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip
+  FFMPEG_SHA256: db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec
 
 permissions:
   contents: read
@@ -32,9 +30,6 @@ jobs:
 
       - name: Download and verify FFmpeg archive
         id: ffmpeg
-        env:
-          FFMPEG_URL: ${{ inputs.ffmpeg_zip_url }}
-          FFMPEG_SHA256: ${{ inputs.ffmpeg_zip_sha256 }}
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:FFMPEG_URL -notmatch '^https://[^\s]+$') { throw 'FFmpeg URL must be a single HTTPS URL' }
@@ -84,8 +79,6 @@ jobs:
         env:
           FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
           FFMPEG_LICENSE_DIR: ${{ steps.ffmpeg.outputs.license_dir }}
-          FFMPEG_URL: ${{ inputs.ffmpeg_zip_url }}
-          FFMPEG_SHA256: ${{ inputs.ffmpeg_zip_sha256 }}
         run: |
           $ErrorActionPreference = 'Stop'
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -95,14 +88,15 @@ jobs:
           $developerCmd = Join-Path $installation 'Common7\Tools\VsDevCmd.bat'
           if (-not (Test-Path -LiteralPath $developerCmd)) { throw 'VsDevCmd.bat unavailable' }
           $version = '1.0.' + $env:GITHUB_RUN_NUMBER + '.0'
+          $signing = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { 'Test' } else { 'Unsigned' }
           # cmd.exe imports the MSVC and Windows SDK environment for build.ps1.
           $build = Join-Path $env:GITHUB_WORKSPACE 'build.ps1'
-          $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing Test' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version
+          $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing "{5}"' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version, $signing
           & cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { throw 'Full MSIX build or test signing failed. Unsigned intermediate may still be uploaded.' }
 
       - name: Publish UNSIGNED intermediate (not installable)
-        if: always()
+        if: github.event_name == 'workflow_dispatch' && always()
         uses: actions/upload-artifact@v4
         with:
           name: SlimClip-UNSIGNED-NOT-INSTALLABLE
@@ -111,7 +105,7 @@ jobs:
           retention-days: 7
 
       - name: Publish TEST-signed MSIX and PUBLIC certificate
-        if: success()
+        if: github.event_name == 'workflow_dispatch' && success()
         uses: actions/upload-artifact@v4
         with:
           name: SlimClip-TEST-SIGNED-TRUST-PUBLIC-CERT-FIRST
