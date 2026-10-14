@@ -1,6 +1,6 @@
 # SlimClip Windows 11 安装、卸载与签名
 
-> **状态：构建配方，尚未通过 MSIX 真实安装/资源管理器测试。** 本仓库的 `build.ps1` 会生成**完整 MSIX**，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，只能在具备这些工具的 Windows 构建机执行。
+> **状态：[Windows CI 第六轮](https://github.com/32ethers/SlimClip/actions/runs/38571220801)已成功生成完整无签名 MSIX；尚未签名、真实安装或验证资源管理器。** 本仓库的 `build.ps1` 会生成完整 MSIX，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，实测构建在 GitHub Windows runner 上完成。
 
 ## GitHub Actions 生成测试包
 

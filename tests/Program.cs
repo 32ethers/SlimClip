@@ -29,6 +29,7 @@ internal static class Program
             Directory.CreateDirectory(_root);
             await Run("AAC stream-copy and copy-mode preservation", AacCopyAsync);
             await Run("Non-AAC audio is converted", NonAacAsync);
+            await Run("Mixed AAC and MP3 tracks remain present", MixedAudioAsync);
             await Run("Copy mode does not overwrite existing output", CopyCollisionAsync);
             await Run("Replace mode preserves input until valid output", ReplaceAsync);
             await Run("Replace mode refuses a distinct MP4 collision", ReplaceCollisionAsync);
@@ -37,7 +38,7 @@ internal static class Program
             await Run("Estimator returns three levels and progress", EstimateAsync);
             await Run("Cancellation never commits or changes the source", CancellationAsync);
             await Run("Larger result is skipped without touching source", SkipLargerAsync);
-            Console.WriteLine($"Result: {10 - _failures}/10 passed, {_failures} failed.");
+            Console.WriteLine($"Result: {11 - _failures}/11 passed, {_failures} failed.");
             return _failures == 0 ? 0 : 1;
         }
         catch (Exception error)
@@ -131,6 +132,31 @@ internal static class Program
         Check(result.Success && File.Exists(output), "Converted output is missing.");
         Check((await MediaTools.ProbeAsync(output, CancellationToken.None)).Audio.Single().Codec == "aac", "MP3 was not converted to AAC.");
         Check(Digest(source) == before, "Original non-AAC file changed.");
+    }
+
+    private static async Task MixedAudioAsync()
+    {
+        string folder = Case("mixed-audio");
+        string aac = await Fixture(folder, "first.mp4");
+        string mp3 = await Fixture(folder, "second.mkv", "libmp3lame");
+        string source = Path.Combine(folder, "mixed.mkv");
+        await Tool("ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", "-i", aac, "-i", mp3,
+            "-map", "0:v:0", "-map", "0:a:0", "-map", "1:a:0", "-c", "copy", "-y", source);
+        var media = await MediaTools.ProbeAsync(source, CancellationToken.None);
+        Check(media.Audio.Select(x => x.Codec).SequenceEqual(new[] { "aac", "mp3" }),
+            "Mixed-audio fixture lost a track.");
+        var encoding = new List<string>();
+        MediaTools.AddEncodingOptions(encoding, media, Fast);
+        int copyIndex = encoding.IndexOf("-c:a"), transcodeIndex = encoding.IndexOf("-c:a:1");
+        Check(copyIndex >= 0 && encoding[copyIndex + 1] == "copy" && transcodeIndex >= 0 &&
+            encoding[transcodeIndex + 1] == "aac" && !encoding.Contains("-c:a:0"),
+            "AAC track was not mapped to stream copy while MP3 was mapped to AAC encode.");
+        var result = await Compression.RunAsync(new(source, "low"), Fast, Options(SaveMode.Copy), false,
+            _ => { }, CancellationToken.None);
+        string output = Path.Combine(folder, "mixed_slimclip_low.mp4");
+        var outputInfo = await MediaTools.ProbeAsync(output, CancellationToken.None);
+        Check(result.Success && outputInfo.Audio.Count == 2 && outputInfo.Audio.All(x => x.Codec == "aac"),
+            "Mixed audio lost tracks or left non-AAC output.");
     }
 
     private static async Task CopyCollisionAsync()
