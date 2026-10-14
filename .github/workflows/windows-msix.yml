@@ -51,8 +51,10 @@ jobs:
           $binDir = $binary[0].DirectoryName
           if (-not (Test-Path -LiteralPath (Join-Path $binDir 'ffprobe.exe') -PathType Leaf)) { throw 'ffprobe.exe must be beside ffmpeg.exe' }
           # Include upstream notices, not merely a sentence claiming compliance.
-          $notices = @(Get-ChildItem -LiteralPath $expanded -Recurse -File | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' })
-          if (-not $notices.Count) { throw 'The binary archive lacks license/COPYING/NOTICE files; use a complete distribution' }
+          $notices = @(Get-ChildItem -LiteralPath $expanded -Recurse -File | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE|README)' })
+          if (-not @($notices | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' }).Count) {
+            throw 'The binary archive lacks license/COPYING/NOTICE files; use a complete distribution'
+          }
           $licenseDir = Join-Path $work 'license-notices'
           New-Item -ItemType Directory -Path $licenseDir | Out-Null
           foreach ($notice in $notices) {

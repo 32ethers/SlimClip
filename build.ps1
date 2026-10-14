@@ -78,8 +78,8 @@ foreach ($tool in @('ffmpeg.exe', 'ffprobe.exe')) {
 }
 if (-not (Test-Path -LiteralPath $FFmpegLicenseDir -PathType Container)) { throw 'FFmpeg license directory is missing' }
 $licenseFiles = @(Get-ChildItem -LiteralPath $FFmpegLicenseDir -Recurse -File |
-    Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' })
-if (-not $licenseFiles.Count) {
+    Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE|README)' })
+if (-not @($licenseFiles | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' }).Count) {
     throw 'Provide the FFmpeg distribution license/COPYING/NOTICE files; never ship third-party binaries without their notices'
 }
 $versionParts = @($PackageVersion.Split('.') | ForEach-Object { [int]$_ })
@@ -113,7 +113,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $publish 'SlimClip.exe') -PathType L
 Copy-Item -Path (Join-Path $publish '*') -Destination $stage -Recurse -Force
 Push-Location $stage
 try {
-    & cl.exe /nologo /W4 /EHsc /std:c++17 /utf-8 /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link /OUT:SlimClipCommand.dll shlwapi.lib shell32.lib
+    $exportDefinition = '/DEF:' + (Join-Path $root 'shell\SlimClipCommand.def')
+    & cl.exe /nologo /W4 /EHsc /std:c++17 /utf-8 /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link /OUT:SlimClipCommand.dll $exportDefinition shlwapi.lib shell32.lib
     if ($LASTEXITCODE -ne 0) { throw 'Native Explorer command compilation failed' }
     $exports = & dumpbin.exe /exports (Join-Path $stage 'SlimClipCommand.dll')
     if ($LASTEXITCODE -ne 0 -or -not ($exports | Select-String 'DllGetClassObject') -or -not ($exports | Select-String 'DllCanUnloadNow')) {

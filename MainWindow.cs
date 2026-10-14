@@ -33,6 +33,7 @@ internal sealed class MainWindow : Window
     private CancellationTokenSource? _current;
     private Task? _worker;
     private bool _exitRequested;
+    private bool _exitReady;
     private bool _warnedBackups;
     private int _pending;
     private readonly TextBlock _message = new() { Text = "就绪。右键视频文件，选择压缩档位或预估。", Margin = new Thickness(8) };
@@ -72,9 +73,9 @@ internal sealed class MainWindow : Window
         Loaded += (_, _) => WarnAboutBackups();
         Closing += (_, args) =>
         {
-            if (_exitRequested) return;
+            if (_exitReady) return;
             args.Cancel = true;
-            Hide(); // Keep the queue and tray alive when the title-bar close button is clicked.
+            if (!_exitRequested) Hide(); // Never close before cancelled work cleans up.
         };
         Closed += (_, _) =>
         {
@@ -119,7 +120,12 @@ internal sealed class MainWindow : Window
         _message.Text = "正在取消任务并清理临时文件…";
         _current?.Cancel(); _lifetime.Cancel(); _queue.Writer.TryComplete();
         try { if (_worker is not null) await _worker; }
-        finally { Close(); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "退出时清理任务失败，请检查原片和备份：\n" + ex.Message,
+                "SlimClip", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { _exitReady = true; Close(); }
     }
 
     private void ShowWindow()

@@ -8,7 +8,7 @@
 2. Workflow 在 Windows runner 安装 .NET 8 SDK，使用 runner 的 Visual Studio C++/Windows SDK 构建；`build.ps1` 把所有运行文件和视觉资产放进同一个完整 MSIX，而非依赖外部程序目录。每次 Actions run number 作为 MSIX 的构建版本编号；测试证书每次运行都重新生成，测试另一版本前需重新明确核验、信任新公钥，是否可原位升级仍需实机验证（必要时先卸载旧测试版）。正式发行应使用稳定的受信任发布者身份。
 3. **仅手动触发**并构建成功时会上传两组**明确区分**的产物：`SlimClip-UNSIGNED-NOT-INSTALLABLE` 仅作构建中间产物，**无法安装**；`SlimClip-TEST-SIGNED-TRUST-PUBLIC-CERT-FIRST` 包含 `SlimClip.test.msix` 和公开的 `SlimClip.test.cer`。若签名失败，workflow 失败，至多留下明确标记的 unsigned 包，不把 unsigned 叫作安装包。
 
-当前固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)与[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；版本号和校验值要成对更新。FFmpeg 二进制的许可取决于具体构建及链接组件；随包携带原发行版许可证和 URL/SHA-256 **不自动满足** GPL/LGPL 及相关库所有义务。公开发行前还需核查相应源码获取和许可证要求。不要把未审计的第三方程序或私钥提交到仓库。
+当前固定 URL/校验值参考 [Gyan 官方版本页](https://www.gyan.dev/ffmpeg/builds/)与[该版本 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)；版本号和校验值要成对更新。该上游明确称其 FFmpeg 二进制为 **GPLv3 静态构建**。**本仓库公开；手动 workflow_dispatch 上传的测试 MSIX 也会公开可下载。**随包携带原发行版许可证和 URL/SHA-256 **不自动满足** GPLv3 对应源码、构建脚本及相关库的全部分发义务；完成许可与相应源码提供方案核查前，不要公开上传测试包。若仅在个人 Windows 11 测试机验收，可先使用私有构建仓库或本地受控打包；勿将私钥提交到任何仓库。
 
 ## 安装测试包（仅在知情测试机上）
 

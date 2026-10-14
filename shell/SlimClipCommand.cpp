@@ -243,7 +243,9 @@ BOOL WINAPI DllMain(HINSTANCE module, DWORD reason, LPVOID)
     if (reason == DLL_PROCESS_ATTACH) { g_module = module; DisableThreadLibraryCalls(module); }
     return TRUE;
 }
-extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID id, void** out)
+// Distinct internal names avoid conflicting SDK combaseapi.h declarations.
+// The .def file exports these under the COM-required Dll* entry-point names.
+extern "C" HRESULT __stdcall SlimClipDllGetClassObject(REFCLSID clsid, REFIID id, void** out)
 {
     if (clsid != CLSID_SlimClip) return CLASS_E_CLASSNOTAVAILABLE;
     auto* factory = new (std::nothrow) CommandFactory;
@@ -251,7 +253,7 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(REFCLSID cl
     HRESULT hr = factory->QueryInterface(id, out);
     factory->Release(); return hr;
 }
-extern "C" __declspec(dllexport) HRESULT __stdcall DllCanUnloadNow()
+extern "C" HRESULT __stdcall SlimClipDllCanUnloadNow()
 {
     return !g_objects && !g_locks ? S_OK : S_FALSE;
 }
