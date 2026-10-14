@@ -20,6 +20,8 @@ internal static class Compression
         if (!IsSupported(request.File)) throw new IOException("视频文件不存在或扩展名不受支持。");
         if (preset.Crf is < 0 or > 51 || preset.MaxHeight < 0 ||
             (preset.MaxHeight != 0 && preset.MaxHeight % 2 != 0)) throw new ArgumentException("压缩档位参数无效。");
+        // Lock before probing so the probed tracks are the same file FFmpeg will read.
+        using var sourceLease = new FileStream(request.File, FileMode.Open, FileAccess.Read, FileShare.Read);
         var media = await MediaTools.ProbeAsync(request.File, cancellation);
         if (media.SubtitleCount + media.AncillaryCount > 0)
         {
@@ -28,8 +30,6 @@ internal static class Compression
             if (!allowExtraTrackOmission)
                 throw new IOException("源文件包含未处理轨道，必须先确认另存结果将不含这些轨道。");
         }
-        // Block cooperating Windows writers/renames while FFmpeg reads the source.
-        using var sourceLease = new FileStream(request.File, FileMode.Open, FileAccess.Read, FileShare.Read);
         var original = new FileInfo(request.File);
         long originalLength = original.Length;
         DateTime originalWriteTime = original.LastWriteTimeUtc;

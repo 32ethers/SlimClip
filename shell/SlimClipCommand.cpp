@@ -13,6 +13,7 @@
 
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib") // CoTaskMemFree
 
 // Keep this GUID in sync with the full MSIX package manifest.
 static constexpr CLSID CLSID_SlimClip = { 0x83e9cd33, 0xc9e0, 0x44de, { 0xb2, 0x65, 0xf1, 0x8f, 0x91, 0xa9, 0xa9, 0x29 } };

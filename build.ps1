@@ -114,7 +114,7 @@ Copy-Item -Path (Join-Path $publish '*') -Destination $stage -Recurse -Force
 Push-Location $stage
 try {
     $exportDefinition = '/DEF:' + (Join-Path $root 'shell\SlimClipCommand.def')
-    & cl.exe /nologo /W4 /EHsc /std:c++17 /utf-8 /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link /OUT:SlimClipCommand.dll $exportDefinition shlwapi.lib shell32.lib
+    & cl.exe /nologo /W4 /EHsc /std:c++17 /utf-8 /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link /OUT:SlimClipCommand.dll $exportDefinition shlwapi.lib shell32.lib ole32.lib
     if ($LASTEXITCODE -ne 0) { throw 'Native Explorer command compilation failed' }
     $exports = & dumpbin.exe /exports (Join-Path $stage 'SlimClipCommand.dll')
     if ($LASTEXITCODE -ne 0 -or -not ($exports | Select-String 'DllGetClassObject') -or -not ($exports | Select-String 'DllCanUnloadNow')) {

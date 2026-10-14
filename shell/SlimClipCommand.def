@@ -1,4 +1,4 @@
 LIBRARY SlimClipCommand
 EXPORTS
-    DllGetClassObject=SlimClipDllGetClassObject
-    DllCanUnloadNow=SlimClipDllCanUnloadNow
+    DllGetClassObject=SlimClipDllGetClassObject PRIVATE
+    DllCanUnloadNow=SlimClipDllCanUnloadNow PRIVATE

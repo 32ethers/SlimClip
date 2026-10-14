@@ -36,7 +36,8 @@ internal static class Program
             await Run("Extra video track requires consent and forbids replacement", ExtraVideoAsync);
             await Run("Estimator returns three levels and progress", EstimateAsync);
             await Run("Cancellation never commits or changes the source", CancellationAsync);
-            Console.WriteLine($"Result: {9 - _failures}/9 passed, {_failures} failed.");
+            await Run("Larger result is skipped without touching source", SkipLargerAsync);
+            Console.WriteLine($"Result: {10 - _failures}/10 passed, {_failures} failed.");
             return _failures == 0 ? 0 : 1;
         }
         catch (Exception error)
@@ -242,6 +243,19 @@ internal static class Program
         Check(reported, "No compression progress was reported before cancellation.");
         Check(Digest(source) == before, "Cancellation modified the source video.");
         Check(!Directory.EnumerateFiles(folder, ".slimclip-*.mp4").Any(), "Cancellation left a temporary MP4.");
+    }
+
+    private static async Task SkipLargerAsync()
+    {
+        string folder = Case("skip-larger"), source = Path.Combine(folder, "already-small.mp4");
+        await Tool("ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
+            "color=c=blue:s=128x72:r=10:d=1.2", "-an", "-c:v", "libx265", "-crf", "51", "-y", source);
+        string before = Digest(source);
+        var result = await Compression.RunAsync(new(source, "low"), new Preset { Crf = 0, MaxHeight = 0 },
+            new Settings { SaveMode = SaveMode.Copy, SkipLargerResult = true }, false,
+            _ => { }, CancellationToken.None);
+        Check(!result.Success && Digest(source) == before, "Larger result damaged the source or was saved.");
+        Check(!File.Exists(Path.Combine(folder, "already-small_slimclip_low.mp4")), "Larger output was not skipped.");
     }
 
     private static async Task ThrowsIOException(Func<Task> action, string expectedMessage)

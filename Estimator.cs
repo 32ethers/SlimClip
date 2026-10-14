@@ -73,7 +73,12 @@ internal static class Estimator
         }
         finally
         {
-            try { Directory.Delete(folder, recursive: true); }
+            try
+            {
+                // Never recurse through a substituted junction/symlink in a shared temp folder.
+                if ((new DirectoryInfo(folder).Attributes & FileAttributes.ReparsePoint) == 0)
+                    Directory.Delete(folder, recursive: true);
+            }
             catch (IOException) { /* Incomplete sample may be locked while cancellation settles. */ }
             catch (UnauthorizedAccessException) { }
         }

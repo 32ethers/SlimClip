@@ -11,6 +11,8 @@ try {
     $opusOutput = Join-Path $folder 'opus-compressed.mp4'
     $mixedSource = Join-Path $folder 'mixed-source.mkv'
     $mixedOutput = Join-Path $folder 'mixed-compressed.mp4'
+    $tinySource = Join-Path $folder 'already-small.mp4'
+    $largerOutput = Join-Path $folder 'lossless-output.mp4'
     & ffmpeg -hide_banner -loglevel error -f lavfi -i 'testsrc2=size=640x360:rate=24' -f lavfi -i 'sine=frequency=440:sample_rate=48000' -t 3 -map '0:v:0' -map '1:a:0' -c:v libx264 -crf 18 -c:a aac -metadata:s:a:0 'language=jpn' -y $source
     if ($LASTEXITCODE -ne 0) { throw 'Creating H.264/AAC test video failed' }
     $probe = & ffprobe -v error -show_streams -show_format -of json $source | ConvertFrom-Json
@@ -41,6 +43,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Per-track AAC conversion failed' }
     $mixed = & ffprobe -v error -show_streams -of json $mixedOutput | ConvertFrom-Json
     if ($mixed.streams.Count -ne 3 -or $mixed.streams[1].codec_name -ne 'aac' -or $mixed.streams[2].codec_name -ne 'aac') { throw 'Audio tracks lost or not converted' }
+    & ffmpeg -hide_banner -nostdin -loglevel error -f lavfi -i 'color=c=blue:s=128x72:r=10:d=1.2' -an -c:v libx265 -crf 51 -y $tinySource
+    if ($LASTEXITCODE -ne 0) { throw 'Creating already-small HEVC source failed' }
+    & ffmpeg -hide_banner -nostdin -loglevel error -i $tinySource -map '0:v:0' -c:v libx265 -crf 0 -tag:v hvc1 -movflags +faststart -y $largerOutput
+    if ($LASTEXITCODE -ne 0 -or (Get-Item $largerOutput).Length -le (Get-Item $tinySource).Length) { throw 'Lossless output was not larger than test source' }
     Write-Host ('PASS: AAC copy, Opus to AAC, mixed two-track audio, H.265 MP4 progress and estimate sample {0:N0} bytes' -f (Get-Item $sample).Length)
 }
 finally {
