@@ -120,6 +120,15 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not ($exports | Select-String 'DllGetClassObject') -or -not ($exports | Select-String 'DllCanUnloadNow')) {
         throw 'Native DLL lacks required COM exports'
     }
+    # Keep the test runner outside the MSIX stage. Exercise the actual built DLL
+    # through its exported class factory, without registration or Explorer.
+    $selfTest = Join-Path $publish 'SlimClipCommandSelfTest.exe'
+    $selfTestObject = '/Fo' + (Join-Path $publish 'SlimClipCommandSelfTest.obj')
+    $selfTestOutput = '/OUT:' + $selfTest
+    & cl.exe /nologo /W4 /EHsc /std:c++17 /utf-8 $selfTestObject (Join-Path $root 'shell\SlimClipCommandSelfTest.cpp') /link $selfTestOutput ole32.lib uuid.lib
+    if ($LASTEXITCODE -ne 0) { throw 'Native Explorer COM self-test compilation failed' }
+    & $selfTest (Join-Path $stage 'SlimClipCommand.dll')
+    if ($LASTEXITCODE -ne 0) { throw "Native Explorer COM self-test failed (exit code $LASTEXITCODE); MSIX packaging aborted" }
 } finally { Pop-Location }
 foreach ($tool in @('ffmpeg.exe', 'ffprobe.exe')) {
     Copy-Item -LiteralPath (Join-Path $FFmpegDir $tool) -Destination (Join-Path $stage $tool) -Force

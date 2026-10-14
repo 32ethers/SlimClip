@@ -32,4 +32,4 @@
 
 ## 实现与验收进度
 
-[Windows CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38575816919)已通过 11 项实际引擎集成测试、FFmpeg 烟测、原生菜单 DLL 编译及完整测试签名 MSIX 打包；随后 Windows Server 2025 runner 安装/卸载步骤失败，原因仍在诊断。源码已包含预估实时进度、托盘、音轨/字幕处理、队列和备份恢复；这些自动测试**不证明** Windows 11 新式资源管理器实际显示或人工音画同步通过。公开分发随包 FFmpeg 前必须核实对应源码和许可义务。
+[Windows CI 第十轮](https://github.com/32ethers/SlimClip/actions/runs/38589585372)已通过 11 项实际引擎集成测试、FFmpeg 烟测、原生菜单 DLL 编译、完整测试签名 MSIX 打包，并在 Windows Server 2025 一次性 runner 上安装、核对包身份、卸载及清理测试证书。源码已包含预估实时进度、托盘、音轨/字幕处理、队列和备份恢复；这些自动测试**不证明** Windows 11 新式资源管理器实际显示或人工音画同步通过。公开分发随包 FFmpeg 前必须核实对应源码和许可义务。

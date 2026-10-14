@@ -1,6 +1,6 @@
 # SlimClip Windows 11 安装、卸载与签名
 
-> **状态：[Windows CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38575816919)已通过完整测试签名 MSIX 构建，但 Windows Server 2025 runner 的安装/卸载步骤失败，原因待诊断；Windows 11 菜单仍未实机验收。** 本仓库的 `build.ps1` 会生成完整 MSIX，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，实测构建在 GitHub Windows runner 上完成。
+> **状态：[Windows CI 第十轮](https://github.com/32ethers/SlimClip/actions/runs/38589585372)已通过完整测试签名 MSIX 构建及 Windows Server 2025 一次性 runner 的安装、核验、卸载与证书清理；Windows 11 菜单和双击安装仍未实机验收。** 本仓库的 `build.ps1` 会生成完整 MSIX，包含自包含的 WPF 应用、x64 `IExplorerCommand` DLL、`ffmpeg.exe` 和 `ffprobe.exe`；它不安装应用，也不会把测试证书加入信任列表。当前本地机器缺少 .NET 8 SDK、C++ 编译器和 Windows SDK，实测构建在 GitHub Windows runner 上完成。
 
 ## GitHub Actions 构建与隔离安装测试
 
