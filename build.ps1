@@ -124,6 +124,11 @@ try {
 foreach ($tool in @('ffmpeg.exe', 'ffprobe.exe')) {
     Copy-Item -LiteralPath (Join-Path $FFmpegDir $tool) -Destination (Join-Path $stage $tool) -Force
 }
+$projectLicense = Join-Path $root 'LICENSE'
+if (-not (Test-Path -LiteralPath $projectLicense -PathType Leaf)) { throw 'Missing SlimClip MIT license' }
+$projectLicenseOut = Join-Path $stage 'licenses\SlimClip'
+New-Item -ItemType Directory -Path $projectLicenseOut -Force | Out-Null
+Copy-Item -LiteralPath $projectLicense -Destination (Join-Path $projectLicenseOut 'LICENSE.txt') -Force
 $licenseOut = Join-Path $stage 'licenses\FFmpeg'
 New-Item -ItemType Directory -Path $licenseOut -Force | Out-Null
 foreach ($licenseFile in $licenseFiles) {

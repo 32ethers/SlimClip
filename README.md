@@ -1,6 +1,6 @@
 # SlimClip（开发中）
 
-Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**当前是源码原型，还没有构建、签名或在资源管理器里验证可安装包。**产品规格以 [DESIGN.md](DESIGN.md) 为准。
+Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**引擎测试与完整 MSIX 无签名打包已在 Windows CI 通过；签名包安装和 Windows 11 资源管理器实机验收尚未确认。**产品规格以 [DESIGN.md](DESIGN.md) 为准。
 
 ## 首版功能
 
@@ -18,6 +18,10 @@ Windows 11 文件资源管理器新式右键菜单的视频压缩入口。**当�
 
 ## 本地可运行的有限测试
 
-使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 11 个实际引擎集成测试，均已在 Windows CI 通过，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**[GitHub Actions 第七轮](https://github.com/32ethers/SlimClip/actions/runs/38573147741)已通过 .NET 引擎测试、FFmpeg 烟测、原生菜单 DLL 编译与完整 MSIX 无签名打包；push 运行不上传 unsigned 包。签名可安装包、安装/卸载以及 Windows 11 新式右键菜单尚未实机验证。**
+使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1` 已验证 H.264/AAC → H.265 MP4、AAC 音轨直接复制、Opus → AAC、混合多音轨、语言标记、`-progress` 输出和取样编码。独立的 `tests/SlimClip.Tests.csproj` 含 11 个实际引擎集成测试，均已在 Windows CI 通过，由 CI 执行（需要设置 `SLIMCLIP_FFMPEG_DIR` 指向工具目录，再运行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`）。**[GitHub Actions 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38575816919)已通过 11 项引擎测试、FFmpeg 烟测、原生菜单 DLL 编译和完整 MSIX 测试签名；Windows Server 2025 的安装/卸载步骤失败，尚在定位。CI 不公开上传包含 FFmpeg 的包；Windows 11 新式右键菜单未实机验证。**
+
+## 开源许可
+
+SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。随包使用的第三方 FFmpeg/ffprobe **不是 MIT**：所选 [Gyan 构建](https://www.gyan.dev/ffmpeg/builds/)标注 GPLv3；其许可证与已核实的来源信息另存于包内 `licenses/FFmpeg/`。公开提供包含该静态二进制的 MSIX 前，仍须核实并提供完整对应源码、依赖和构建脚本；仅开源 SlimClip 自身不能替代这项义务。详见 [安装说明](packaging/INSTALL.md)。
 
 设计依据：[微软的新式文件菜单](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer)和[MSIX 签名说明](https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide)。

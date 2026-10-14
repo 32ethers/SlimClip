@@ -25,7 +25,18 @@ try {
     $trusted = Import-Certificate -FilePath $CertificatePath -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople'
     if ($trusted.Thumbprint -ne $thumbprint) { throw 'Imported certificate fingerprint mismatch.' }
     $imported = $true
-    Add-AppxPackage -Path $PackagePath -ErrorAction Stop
+    try { Add-AppxPackage -Path $PackagePath -ErrorAction Stop }
+    catch {
+        $message = $_.Exception.Message -replace '[%\r\n]', ' '
+        Write-Host ('::error::Add-AppxPackage: ' + $message.Substring(0, [Math]::Min(500, $message.Length)))
+        try {
+            foreach ($entry in @(Get-AppxLog | Select-Object -Last 8)) {
+                $summary = ([string]$entry.Message) -replace '[%\r\n]', ' '
+                if ($summary) { Write-Host ('::error::AppxLog: ' + $summary.Substring(0, [Math]::Min(500, $summary.Length))) }
+            }
+        } catch { Write-Host '::warning::AppxLog unavailable after installation failure.' }
+        throw
+    }
     $installed = @(Get-AppxPackage -Name $packageName)
     if ($installed.Count -ne 1 -or $installed[0].Publisher -cne 'CN=SlimClip Development') {
         throw 'Installed package identity or publisher did not match SlimClip.'

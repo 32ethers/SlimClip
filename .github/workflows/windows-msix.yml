@@ -127,5 +127,12 @@ jobs:
       # cannot demonstrate the Windows 11 Explorer menu UI. No artifacts escape CI.
       - name: Install and uninstall signed MSIX on disposable runner
         run: |
-          & .\tests\msix-install-smoke.ps1 -PackagePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.msix') -CertificatePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.cer')
-          if ($LASTEXITCODE -ne 0) { throw 'Signed MSIX install/uninstall smoke test failed' }
+          $ErrorActionPreference = 'Stop'
+          try {
+            & .\tests\msix-install-smoke.ps1 -PackagePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.msix') -CertificatePath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip.test.cer')
+            if ($LASTEXITCODE -ne 0) { throw "Install smoke script exit code: $LASTEXITCODE" }
+          } catch {
+            $detail = ($_ | Out-String) -replace '[%\r\n]', ' '
+            Write-Host ('::error::Install/uninstall: ' + $detail.Substring(0, [Math]::Min(800, $detail.Length)))
+            throw
+          }
