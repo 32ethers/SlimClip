@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <!-- Avoid WinForms global usings clashing with WPF controls. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>SlimClip</AssemblyName>
+    <RootNamespace>SlimClip</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- SDK globbing otherwise compiles the standalone console tests into the WPF app. -->
+    <Compile Remove="tests/**/*.cs" />
+    <InternalsVisibleTo Include="SlimClip.Tests" />
+  </ItemGroup>
+</Project>

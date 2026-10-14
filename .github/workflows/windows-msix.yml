@@ -1,0 +1,122 @@
+name: Windows 11 MSIX test build
+
+# Use a pinned FFmpeg archive and independently supplied SHA-256. This prevents
+# silently downloading an ever-changing 'latest' binary into signed packages.
+on:
+  workflow_dispatch:
+    inputs:
+      ffmpeg_zip_url:
+        description: HTTPS URL of an x64 FFmpeg ZIP containing ffmpeg.exe, ffprobe.exe and its license notices
+        required: true
+        type: string
+      ffmpeg_zip_sha256:
+        description: SHA-256 of that exact ZIP (64 hexadecimal digits)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download and verify FFmpeg archive
+        id: ffmpeg
+        env:
+          FFMPEG_URL: ${{ inputs.ffmpeg_zip_url }}
+          FFMPEG_SHA256: ${{ inputs.ffmpeg_zip_sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:FFMPEG_URL -notmatch '^https://[^\s]+$') { throw 'FFmpeg URL must be a single HTTPS URL' }
+          if ($env:FFMPEG_SHA256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Provide a 64-digit SHA-256' }
+          $work = Join-Path $env:RUNNER_TEMP 'SlimClip-FFmpeg-input'
+          New-Item -ItemType Directory -Path $work -Force | Out-Null
+          $archive = Join-Path $work 'ffmpeg.zip'
+          Invoke-WebRequest -Uri $env:FFMPEG_URL -OutFile $archive
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if ($actual -ine $env:FFMPEG_SHA256) { throw "FFmpeg ZIP hash mismatch: $actual" }
+          $expanded = Join-Path $work 'expanded'
+          Expand-Archive -LiteralPath $archive -DestinationPath $expanded
+          $binary = @(Get-ChildItem -LiteralPath $expanded -Recurse -File -Filter 'ffmpeg.exe')
+          if ($binary.Count -ne 1) { throw 'ZIP must have exactly one ffmpeg.exe' }
+          $binDir = $binary[0].DirectoryName
+          if (-not (Test-Path -LiteralPath (Join-Path $binDir 'ffprobe.exe') -PathType Leaf)) { throw 'ffprobe.exe must be beside ffmpeg.exe' }
+          # Include upstream notices, not merely a sentence claiming compliance.
+          $notices = @(Get-ChildItem -LiteralPath $expanded -Recurse -File | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' })
+          if (-not $notices.Count) { throw 'The binary archive lacks license/COPYING/NOTICE files; use a complete distribution' }
+          $licenseDir = Join-Path $work 'license-notices'
+          New-Item -ItemType Directory -Path $licenseDir | Out-Null
+          foreach ($notice in $notices) {
+            $relative = $notice.FullName.Substring($expanded.Length).TrimStart('\')
+            $destination = Join-Path $licenseDir $relative
+            New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+            Copy-Item -LiteralPath $notice.FullName -Destination $destination
+          }
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "bin_dir=$binDir`nlicense_dir=$licenseDir`n", $utf8)
+
+      - name: Smoke-test FFmpeg audio and H.265 conversion
+        env:
+          FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
+        run: |
+          $env:PATH = "$env:FFMPEG_DIR;$env:PATH"
+          & .\tests\ffmpeg-smoke.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg smoke test failed' }
+
+      - name: Run .NET video-engine integration tests
+        env:
+          SLIMCLIP_FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
+        run: |
+          dotnet run --project tests/SlimClip.Tests.csproj --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'SlimClip .NET integration tests failed' }
+
+      - name: Build full MSIX and self-signed test package
+        env:
+          FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
+          FFMPEG_LICENSE_DIR: ${{ steps.ffmpeg.outputs.license_dir }}
+          FFMPEG_URL: ${{ inputs.ffmpeg_zip_url }}
+          FFMPEG_SHA256: ${{ inputs.ffmpeg_zip_sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio build tools unavailable on runner' }
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw 'No x64 C++ toolchain on runner' }
+          $developerCmd = Join-Path $installation 'Common7\Tools\VsDevCmd.bat'
+          if (-not (Test-Path -LiteralPath $developerCmd)) { throw 'VsDevCmd.bat unavailable' }
+          $version = '1.0.' + $env:GITHUB_RUN_NUMBER + '.0'
+          # cmd.exe imports the MSVC and Windows SDK environment for build.ps1.
+          $build = Join-Path $env:GITHUB_WORKSPACE 'build.ps1'
+          $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -FFmpegDir "{2}" -FFmpegLicenseDir "{3}" -PackageVersion "{4}" -Signing Test' -f $developerCmd, $build, $env:FFMPEG_DIR, $env:FFMPEG_LICENSE_DIR, $version
+          & cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { throw 'Full MSIX build or test signing failed. Unsigned intermediate may still be uploaded.' }
+
+      - name: Publish UNSIGNED intermediate (not installable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimClip-UNSIGNED-NOT-INSTALLABLE
+          path: artifacts/SlimClip.unsigned.msix
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Publish TEST-signed MSIX and PUBLIC certificate
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimClip-TEST-SIGNED-TRUST-PUBLIC-CERT-FIRST
+          path: |
+            artifacts/SlimClip.test.msix
+            artifacts/SlimClip.test.cer
+          if-no-files-found: error
+          retention-days: 14

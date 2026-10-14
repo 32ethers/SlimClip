@@ -1,0 +1,12 @@
+bin/
+obj/
+artifacts/
+*.pfx
+*.p12
+*.key
+*.cer
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+.vs/
