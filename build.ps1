@@ -5,8 +5,8 @@
 param(
     [Parameter(Mandatory = $true)][string] $FFmpegDir,
     [Parameter(Mandatory = $true)][string] $FFmpegLicenseDir,
-    [Parameter(Mandatory = $true)][string] $FFmpegSourceUrl = $env:FFMPEG_URL,
-    [Parameter(Mandatory = $true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string] $FFmpegArchiveSha256 = $env:FFMPEG_SHA256,
+    [string] $FFmpegSourceUrl = $env:FFMPEG_URL,
+    [string] $FFmpegArchiveSha256 = $env:FFMPEG_SHA256,
     [ValidatePattern('^\d{1,5}\.\d{1,5}\.\d{1,5}\.0$')][string] $PackageVersion = '1.0.0.0',
     [ValidateSet('Unsigned', 'Test')][string] $Signing = 'Unsigned'
 )
@@ -70,6 +70,7 @@ Assert-Tool dumpbin.exe
 if ($Signing -eq 'Test') { Assert-Tool signtool.exe }
 if (-not (@(& dotnet --list-sdks) | Where-Object { $_ -match '^8\.' })) { throw 'Missing .NET 8 SDK' }
 if ($FFmpegSourceUrl -notmatch '^https://') { throw 'FFmpegSourceUrl must be an HTTPS release/archive URL' }
+if ($FFmpegArchiveSha256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'FFmpegArchiveSha256 must be a 64-digit SHA-256' }
 $FFmpegDir = [System.IO.Path]::GetFullPath($FFmpegDir)
 $FFmpegLicenseDir = [System.IO.Path]::GetFullPath($FFmpegLicenseDir)
 foreach ($tool in @('ffmpeg.exe', 'ffprobe.exe')) {
