@@ -14,6 +14,8 @@ $com = 'Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\{83e9cd33-c9e0-44de-b
 $guid = '{83e9cd33-c9e0-44de-b265-f18f91a9a929}'
 $uninstallRoot = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 function Find-UninstallEntries {
+    # Fresh per-user runner profiles need not have an Uninstall registry subtree yet.
+    if (-not (Test-Path -LiteralPath $uninstallRoot)) { return @() }
     @(Get-ChildItem -LiteralPath $uninstallRoot -ErrorAction Stop | Where-Object { $_.GetValue('DisplayName') -eq 'SlimClip' })
 }
 if (@(Find-UninstallEntries).Count -ne 0) { throw 'Runner already has a SlimClip uninstall entry.' }
