@@ -170,6 +170,22 @@ int wmain(int argc, wchar_t** argv)
                     hr = children->Next(1, &extra, &fetched);
                     Check(hr == S_FALSE && fetched == 0 && extra == nullptr, "exactly five child commands");
                     if (extra) extra->Release();
+                    Check(children->Reset() == S_OK, "reset child enumerator");
+                    Check(children->Skip(5) == S_OK, "skipping exactly five commands succeeds");
+                    IExplorerCommand* afterSkip = nullptr;
+                    ULONG afterFetched = 99;
+                    hr = children->Next(1, &afterSkip, &afterFetched);
+                    Check(hr == S_FALSE && afterFetched == 0 && afterSkip == nullptr, "exact skip reaches end");
+                    if (afterSkip) afterSkip->Release();
+                    Check(children->Reset() == S_OK, "reset after exact skip");
+                    Check(children->Skip(4) == S_OK, "skip to final child succeeds");
+                    IExplorerCommand* last = nullptr;
+                    ULONG lastFetched = 0;
+                    hr = children->Next(1, &last, &lastFetched);
+                    Check(hr == S_OK && lastFetched == 1 && last != nullptr, "final child remains after skip");
+                    if (last) last->Release();
+                    Check(children->Reset() == S_OK, "reset before oversized skip");
+                    Check(children->Skip(~static_cast<ULONG>(0)) == S_FALSE, "oversized skip does not overflow");
                     children->Release();
                 }
                 root->Release();
@@ -180,6 +196,6 @@ int wmain(int argc, wchar_t** argv)
     }
     FreeLibrary(dll);
     if (failures) { std::cerr << "SlimClip COM self-test: " << failures << " failure(s)\n"; return 1; }
-    std::cout << "SlimClip COM self-test passed: root, five children, visibility, and estimate selection\n";
+    std::cout << "SlimClip COM self-test passed: root, five children, visibility, estimate selection, and Skip boundaries\n";
     return 0;
 }

@@ -15,7 +15,7 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "ole32.lib") // CoTaskMemFree
 
-// Keep this GUID in sync with the full MSIX package manifest.
+// Keep this GUID in sync with the HKCU CLSID and ExplorerCommandHandler in packaging/SlimClip.iss.
 static constexpr CLSID CLSID_SlimClip = { 0x83e9cd33, 0xc9e0, 0x44de, { 0xb2, 0x65, 0xf1, 0x8f, 0x91, 0xa9, 0xa9, 0x29 } };
 static HMODULE g_module = nullptr;
 static std::atomic<long> g_objects{ 0 }, g_locks{ 0 };
@@ -69,7 +69,14 @@ public:
     STDMETHODIMP_(ULONG) AddRef() override { return ++refs; }
     STDMETHODIMP_(ULONG) Release() override { ULONG n = --refs; if (!n) delete this; return n; }
     STDMETHODIMP Next(ULONG requested, IExplorerCommand** commands, ULONG* fetched) override;
-    STDMETHODIMP Skip(ULONG amount) override { index = std::min<ULONG>(5, index + amount); return index < 5 ? S_OK : S_FALSE; }
+    STDMETHODIMP Skip(ULONG amount) override
+    {
+        // Skipping the final element is a complete skip (S_OK); only overshoot is S_FALSE.
+        // Compare before adding to avoid ULONG overflow on an untrusted caller-supplied count.
+        if (amount <= 5 - index) { index += amount; return S_OK; }
+        index = 5;
+        return S_FALSE;
+    }
     STDMETHODIMP Reset() override { index = 0; return S_OK; }
     STDMETHODIMP Clone(IEnumExplorerCommand** out) override
     {
