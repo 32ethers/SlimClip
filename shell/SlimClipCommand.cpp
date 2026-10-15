@@ -20,6 +20,38 @@ static constexpr CLSID CLSID_SlimClip = { 0x83e9cd33, 0xc9e0, 0x44de, { 0xb2, 0x
 static HMODULE g_module = nullptr;
 static std::atomic<long> g_objects{ 0 }, g_locks{ 0 };
 
+static bool SimplifiedWindowsUi()
+{
+    // Explorer has its own language, independent of SlimClip's in-app setting.
+    const LANGID language = GetUserDefaultUILanguage();
+    if (PRIMARYLANGID(language) != LANG_CHINESE) return false;
+    const WORD region = SUBLANGID(language);
+    if (region == SUBLANG_CHINESE_SIMPLIFIED || region == SUBLANG_CHINESE_SINGAPORE) return true;
+#ifdef SUBLANG_CHINESE_MALAYSIA
+    if (region == SUBLANG_CHINESE_MALAYSIA) return true;
+#endif
+    return false; // Traditional Chinese and unknown sublanguages fall back to English.
+}
+
+static std::wstring InstalledExe()
+{
+    std::vector<wchar_t> dllPath(MAX_PATH);
+    DWORD length = 0;
+    for (;;)
+    {
+        length = GetModuleFileNameW(g_module, dllPath.data(), static_cast<DWORD>(dllPath.size()));
+        if (!length) return {};
+        if (length < dllPath.size() - 1) break;
+        if (dllPath.size() >= 32768) return {};
+        dllPath.resize(dllPath.size() * 2);
+    }
+    std::wstring exe(dllPath.data(), length);
+    const auto slash = exe.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) return {};
+    exe.resize(slash + 1);
+    return exe + L"SlimClip.exe";
+}
+
 static bool IsVideo(const std::wstring& path)
 {
     const auto dot = path.find_last_of(L'.');
@@ -107,10 +139,18 @@ public:
     STDMETHODIMP GetTitle(IShellItemArray*, PWSTR* title) override
     {
         if (!title) return E_POINTER;
-        constexpr const wchar_t* names[] = { L"压缩视频", L"低（小文件）", L"中（均衡）", L"高（高画质）", L"预估大小", L"设置" };
-        return SHStrDupW(names[kind + 1], title);
+        constexpr const wchar_t* chinese[] = { L"压缩视频", L"低（小文件）", L"中（均衡）", L"高（高画质）", L"预估大小", L"设置" };
+        constexpr const wchar_t* english[] = { L"Compress Video", L"Low (small file)", L"Medium (balanced)", L"High (quality)", L"Estimate Size", L"Settings" };
+        return SHStrDupW((SimplifiedWindowsUi() ? chinese : english)[kind + 1], title);
     }
-    STDMETHODIMP GetIcon(IShellItemArray*, PWSTR* icon) override { if (!icon) return E_POINTER; *icon = nullptr; return E_NOTIMPL; }
+    STDMETHODIMP GetIcon(IShellItemArray*, PWSTR* icon) override
+    {
+        if (!icon) return E_POINTER;
+        *icon = nullptr;
+        if (kind != -1) return E_NOTIMPL;
+        const auto exe = InstalledExe();
+        return exe.empty() ? E_FAIL : SHStrDupW((exe + L",0").c_str(), icon);
+    }
     STDMETHODIMP GetToolTip(IShellItemArray*, PWSTR* tip) override { if (!tip) return E_POINTER; *tip = nullptr; return E_NOTIMPL; }
     STDMETHODIMP GetCanonicalName(GUID* name) override
     {
@@ -148,21 +188,8 @@ public:
     STDMETHODIMP Invoke(IShellItemArray* items, IBindCtx*) override
     {
         if (kind == -1 || !AllVideo(items)) return E_INVALIDARG;
-        std::vector<wchar_t> dllPath(MAX_PATH);
-        DWORD length = 0;
-        for (;;)
-        {
-            length = GetModuleFileNameW(g_module, dllPath.data(), static_cast<DWORD>(dllPath.size()));
-            if (!length) return HRESULT_FROM_WIN32(GetLastError());
-            if (length < dllPath.size() - 1) break;
-            if (dllPath.size() >= 32768) return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
-            dllPath.resize(dllPath.size() * 2);
-        }
-        std::wstring exe(dllPath.data(), length);
-        auto slash = exe.find_last_of(L"\\/");
-        if (slash == std::wstring::npos) return E_FAIL;
-        exe.resize(slash + 1);
-        exe += L"SlimClip.exe";
+        const std::wstring exe = InstalledExe();
+        if (exe.empty()) return E_FAIL;
         const wchar_t* options[] = { L"--low", L"--medium", L"--high", L"--estimate", L"--settings" };
         DWORD count = 0; items->GetCount(&count);
         if (kind == 3 && count != 1) return E_INVALIDARG;

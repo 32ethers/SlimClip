@@ -83,7 +83,7 @@ try {
 
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $stage 'LICENSE.txt')
 # The test runner and C++ intermediate files remain in exe-native-*, not the installer stage.
-& $iscc ('/DStageDir=' + $stage) ('/DAppVersion=' + $Version) ('/O' + $output) '/FSlimClip-Setup' (Join-Path $PSScriptRoot 'SlimClip.iss')
+& $iscc ('/DStageDir=' + $stage) ('/DAppVersion=' + $Version) ('/DLogoFile=' + (Join-Path $root 'assets\SlimClip.ico')) ('/O' + $output) '/FSlimClip-Setup' (Join-Path $PSScriptRoot 'SlimClip.iss')
 Require-Exit 'Inno Setup compilation'
 if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw "Missing expected installer: $setup" }
 Write-Host "Installer: $setup (unsigned; no bundled FFmpeg; no certificate/trust changes)"

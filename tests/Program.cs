@@ -7,6 +7,7 @@
 // for the standalone integration-test fallback; production never searches that directory.
 // All media fixtures and outputs live in a uniquely named temporary directory, never in a user's video directory.
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Cryptography;
 using SlimClip;
 
@@ -26,9 +27,12 @@ internal static class Program
                 args.Length == 2 && args[0] == "--ffmpeg-dir" ? args[1] : null;
             if (string.IsNullOrWhiteSpace(toolDirectory) || !Path.IsPathFullyQualified(toolDirectory))
                 throw new ArgumentException("Set SLIMCLIP_FFMPEG_DIR or pass --ffmpeg-dir <absolute directory containing ffmpeg.exe and ffprobe.exe>.");
+            Loc.Configure("zh-Hans"); // Keep pre-existing Chinese error/estimate assertions deterministic.
             StageTools(toolDirectory);
             _root = Path.Combine(Path.GetTempPath(), "SlimClip.Tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_root);
+            await Run("English and Simplified Chinese localization", LocalizationAsync);
+            await Run("PATH requires an absolute paired FFmpeg directory", PathDiscoveryAsync);
             await Run("AAC stream-copy and copy-mode preservation", AacCopyAsync);
             await Run("Non-AAC audio is converted", NonAacAsync);
             await Run("Mixed AAC and MP3 tracks remain present", MixedAudioAsync);
@@ -41,7 +45,7 @@ internal static class Program
             await Run("Remaining time handles early, final and invalid progress", RemainingTimeAsync);
             await Run("Cancellation never commits or changes the source", CancellationAsync);
             await Run("Larger result is skipped without touching source", SkipLargerAsync);
-            Console.WriteLine($"Result: {12 - _failures}/12 passed, {_failures} failed.");
+            Console.WriteLine($"Result: {14 - _failures}/14 passed, {_failures} failed.");
             return _failures == 0 ? 0 : 1;
         }
         catch (Exception error)
@@ -62,6 +66,67 @@ internal static class Program
 
     // Separate runner-only check of the actual first-use HTTPS, pinned-hash and ZIP path.
     // Deliberately downloads from upstream a second time; no binary leaves the runner.
+    private static Task LocalizationAsync()
+    {
+        try
+        {
+            Check(Settings.NormalizeLanguage("unexpected") == "auto" && Settings.NormalizeLanguage(null) == "auto",
+                "Invalid or old language settings must fall back to auto.");
+            foreach (string key in Loc.Keys)
+            {
+                Loc.Configure("en");
+                Check(!string.IsNullOrWhiteSpace(Loc.T(key)), "Missing English resource: " + key);
+                Loc.F(key, Enumerable.Repeat<object>(4.5, 12).ToArray());
+                Loc.Configure("zh-Hans");
+                Check(!string.IsNullOrWhiteSpace(Loc.T(key)), "Missing Chinese resource: " + key);
+                Loc.F(key, Enumerable.Repeat<object>(4.5, 12).ToArray());
+            }
+            Loc.Configure("auto", CultureInfo.GetCultureInfo("zh-CN"));
+            Check(Loc.T("settings") == "设置", "Chinese Windows UI auto language failed.");
+            Loc.Configure("auto", CultureInfo.GetCultureInfo("en-US"));
+            Check(Loc.T("settings") == "Settings", "English Windows UI auto language failed.");
+            Loc.Configure("auto", CultureInfo.GetCultureInfo("zh-TW"));
+            Check(Loc.T("settings") == "Settings", "Traditional Chinese must not be misidentified as Simplified.");
+            Loc.Configure("zh-Hans", CultureInfo.GetCultureInfo("en-US"));
+            Check(Loc.T("settings") == "设置", "Explicit Chinese setting failed.");
+            Loc.Configure("en", CultureInfo.GetCultureInfo("zh-CN"));
+            Check(Loc.T("settings") == "Settings", "Explicit English setting failed.");
+        }
+        finally { Loc.Configure("zh-Hans"); }
+        return Task.CompletedTask;
+    }
+
+    private static Task PathDiscoveryAsync()
+    {
+        string incomplete = Path.Combine(_root, "only-ffmpeg");
+        string pair = Path.Combine(_root, "tool pair");
+        Directory.CreateDirectory(incomplete);
+        Directory.CreateDirectory(pair);
+        File.WriteAllBytes(Path.Combine(incomplete, "ffmpeg.exe"), new byte[] { 1 });
+        File.WriteAllBytes(Path.Combine(pair, "ffmpeg.exe"), new byte[] { 1 });
+        File.WriteAllBytes(Path.Combine(pair, "ffprobe.exe"), new byte[] { 1 });
+        string entries = string.Join(Path.PathSeparator.ToString(), new[] { "relative-dir", incomplete, '"' + pair + '"' });
+        Check(FfmpegSetup.FindOnPath(entries) == pair, "PATH did not select the first complete absolute tool pair.");
+        string missing = Path.Combine(_root, "missing-tools");
+        Check(MediaTools.ResolveTool("ffmpeg", null, missing, entries) == Path.Combine(pair, "ffmpeg.exe") &&
+              MediaTools.ResolveTool("ffprobe", null, missing, entries) == Path.Combine(pair, "ffprobe.exe"),
+            "Production resolution did not use both executables from the PATH pair.");
+        string preferred = Path.Combine(_root, "preferred-tools");
+        Directory.CreateDirectory(preferred);
+        File.WriteAllBytes(Path.Combine(preferred, "ffmpeg.exe"), new byte[] { 1 });
+        File.WriteAllBytes(Path.Combine(preferred, "ffprobe.exe"), new byte[] { 1 });
+        Check(MediaTools.ResolveTool("ffmpeg", preferred, pair, entries) == Path.Combine(preferred, "ffmpeg.exe"),
+            "Explicit folder must take priority over user-local tools and PATH.");
+        Check(MediaTools.ResolveTool("ffprobe", null, preferred, entries) == Path.Combine(preferred, "ffprobe.exe"),
+            "User-local tools must take priority over PATH.");
+        try { MediaTools.ResolveTool("ffmpeg", incomplete, missing, entries); throw new Exception("Incomplete explicit folder incorrectly fell back to PATH."); }
+        catch (IOException) { /* An explicit invalid choice must fail visibly, not silently change builds. */ }
+        Check(FfmpegSetup.FindOnPath("relative-dir" + Path.PathSeparator + incomplete) is null,
+            "Relative or incomplete PATH entries must not resolve tools.");
+        Check(FfmpegSetup.FindOnPath(null) is null, "Empty PATH must not resolve a tool.");
+        return Task.CompletedTask;
+    }
+
     private static async Task<int> DownloadSmokeAsync()
     {
         if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" ||

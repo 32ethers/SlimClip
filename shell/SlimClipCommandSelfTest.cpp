@@ -14,6 +14,18 @@
 static constexpr CLSID kClsid = { 0x83e9cd33, 0xc9e0, 0x44de, { 0xb2, 0x65, 0xf1, 0x8f, 0x91, 0xa9, 0xa9, 0x29 } };
 static int failures = 0;
 
+static bool SimplifiedWindowsUi()
+{
+    const LANGID language = GetUserDefaultUILanguage();
+    if (PRIMARYLANGID(language) != LANG_CHINESE) return false;
+    const WORD region = SUBLANGID(language);
+    if (region == SUBLANG_CHINESE_SIMPLIFIED || region == SUBLANG_CHINESE_SINGAPORE) return true;
+#ifdef SUBLANG_CHINESE_MALAYSIA
+    if (region == SUBLANG_CHINESE_MALAYSIA) return true;
+#endif
+    return false;
+}
+
 static void Check(bool ok, const char* what)
 {
     if (!ok) { std::cerr << "SlimClip COM self-test FAILED: " << what << '\n'; ++failures; }
@@ -99,7 +111,7 @@ static void TestCommand(IExplorerCommand* command, const wchar_t* title,
 {
     PWSTR actual = nullptr;
     HRESULT hr = command->GetTitle(video, &actual);
-    Check(SUCCEEDED(hr) && actual && title == std::wstring(actual), "Chinese menu title");
+    Check(SUCCEEDED(hr) && actual && title == std::wstring(actual), "localized menu title");
     CoTaskMemFree(actual);
     EXPCMDSTATE state = ECS_HIDDEN;
     hr = command->GetState(video, FALSE, &state);
@@ -143,7 +155,12 @@ int wmain(int argc, wchar_t** argv)
                 IShellItem* two[] = { &movie, &another };
                 IShellItem* both[] = { &movie, &document };
                 FakeArray video(one, 1), nonvideo(bad, 1), multiple(two, 2), mixed(both, 2);
-                TestCommand(root, L"压缩视频", &video, &nonvideo, &multiple, &mixed, false);
+                const bool simplified = SimplifiedWindowsUi();
+                TestCommand(root, simplified ? L"压缩视频" : L"Compress Video", &video, &nonvideo, &multiple, &mixed, false);
+                PWSTR icon = nullptr;
+                hr = root->GetIcon(&video, &icon);
+                Check(hr == S_OK && icon && std::wstring(icon).find(L"SlimClip.exe,0") != std::wstring::npos, "root exposes application logo");
+                CoTaskMemFree(icon);
                 EXPCMDFLAGS flags = ECF_DEFAULT;
                 hr = root->GetFlags(&flags);
                 Check(hr == S_OK && (flags & ECF_HASSUBCOMMANDS) != 0, "root flyout flag");
@@ -152,7 +169,9 @@ int wmain(int argc, wchar_t** argv)
                 Check(hr == S_OK && children != nullptr, "root enumerates children");
                 if (children)
                 {
-                    const wchar_t* expected[] = { L"低（小文件）", L"中（均衡）", L"高（高画质）", L"预估大小", L"设置" };
+                    const wchar_t* chinese[] = { L"低（小文件）", L"中（均衡）", L"高（高画质）", L"预估大小", L"设置" };
+                    const wchar_t* english[] = { L"Low (small file)", L"Medium (balanced)", L"High (quality)", L"Estimate Size", L"Settings" };
+                    const wchar_t** expected = simplified ? chinese : english;
                     for (int i = 0; i < 5; ++i)
                     {
                         IExplorerCommand* child = nullptr;

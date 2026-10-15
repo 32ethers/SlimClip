@@ -1,7 +1,8 @@
 # Install and uninstall the per-user unsigned EXE on a disposable GitHub Windows runner.
 # Never run on a user's workstation: it inspects/removes this user's SlimClip registration.
 [CmdletBinding()]
-param([Parameter(Mandatory)][string] $InstallerPath)
+param([Parameter(Mandatory)][string] $InstallerPath,
+      [ValidateSet('english','chinesesimplified')][string] $Language = 'english')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows') {
@@ -24,7 +25,7 @@ if ((Test-Path -LiteralPath $installDir) -or (Test-Path -LiteralPath $verb) -or 
 }
 $uninstaller = Join-Path $installDir 'unins000.exe'
 try {
-    $installer = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-') -PassThru -Wait
+    $installer = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',("/LANG=$Language")) -PassThru -Wait
     if ($installer.ExitCode -ne 0) { throw "Inno Setup failed with exit code $($installer.ExitCode)" }
     foreach ($name in @('SlimClip.exe','SlimClipCommand.dll','LICENSE.txt','unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDir $name) -PathType Leaf)) { throw "Installed file missing: $name" }
@@ -42,7 +43,9 @@ try {
     $threading = (Get-Item -LiteralPath $com).GetValue('ThreadingModel')
     $handler = (Get-Item -LiteralPath $verb).GetValue('ExplorerCommandHandler')
     $selection = (Get-Item -LiteralPath $verb).GetValue('MultiSelectModel')
-    if ($actualDll -ine (Join-Path $installDir 'SlimClipCommand.dll') -or $threading -ne 'Apartment' -or $handler -ine $guid -or $selection -ne 'Player') {
+    $menuIcon = (Get-Item -LiteralPath $verb).GetValue('Icon')
+    if ($actualDll -ine (Join-Path $installDir 'SlimClipCommand.dll') -or $threading -ne 'Apartment' -or $handler -ine $guid -or $selection -ne 'Player' -or
+        $menuIcon -ine ((Join-Path $installDir 'SlimClip.exe') + ',0')) {
         throw "Classic Explorer handler mismatch: DLL=$actualDll; threading=$threading; CLSID=$handler; selection=$selection"
     }
     Write-Host 'PASS: per-user EXE install, classic COM submenu registration, no bundled FFmpeg.'

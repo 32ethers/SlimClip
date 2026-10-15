@@ -1,0 +1,11 @@
+# SlimClip · preview / 预览版
+
+**English:** Unsigned per-user Windows 10/11 x64 installer (`SlimClip-Setup.exe`). The classic Explorer video-compression submenu appears under **Show more options** on Windows 11, not in its modern first-level menu. The new film-and-inward-arrow icon identifies the app, tray and context-menu command. H.265 MP4 compression, three presets and size estimates show progress and approximate time remaining. Interface language: English or Simplified Chinese, selectable in Settings (restart required); the Explorer submenu follows the Windows display language. Existing `ffmpeg.exe` **and** `ffprobe.exe` can be selected from a folder or discovered as a pair in one absolute `PATH` directory. If unavailable, SlimClip only offers an upstream download after explicit user consent.
+
+**简体中文：** 未签名的 Windows 10/11 x64 每用户安装器（`SlimClip-Setup.exe`）。传统视频压缩右键子菜单位于 Windows 11 的**显示更多选项**内，不在第一层新式菜单。胶片、播放及向内箭头标志用于程序、托盘和右键入口。H.265 MP4 三档压缩及大小预估显示进度和近似剩余时间。界面支持英语/简体中文，在设置中切换后重启生效；资源管理器子菜单跟随 Windows 显示语言。既可指定现有 FFmpeg 目录，也能从 `PATH` 的同一绝对目录找到成对的 `ffmpeg.exe`、`ffprobe.exe`；缺少工具时仅在用户主动同意后提供上游下载。
+
+**FFmpeg and licenses / FFmpeg 与许可：** The installer and repository **do not bundle FFmpeg binaries**. SlimClip's own code is MIT. The separately offered Gyan FFmpeg build is GPLv3; a user-supplied build follows its own license. Downloaded binaries are verified using the pinned SHA-256. No certificate is installed. / 安装包和仓库**不内置 FFmpeg 二进制**。SlimClip 自有代码为 MIT；提供下载的 Gyan 构建独立采用 GPLv3，自备版本以实际许可为准；上游下载核对固定 SHA-256。不安装证书。
+
+**Preview limitations / 预览限制：** The installer is unsigned and may trigger SmartScreen. CI validates engine tests, native menu logic, first-use upstream download and disposable Windows installation/uninstallation. **Actual Windows 11 Explorer display, consent dialog, queue/tray interaction, audio/video sync and upgrade behavior still need manual acceptance**; a CI registration check is not a visual test. / 安装器未签名，可能触发 SmartScreen；自动测试不等于 Windows 11 实机菜单、授权弹窗、队列/托盘、音画同步与升级验收。请先用可丢弃的视频副本测试。
+
+Installation and manual checklist / 安装与人工验收：[installation](https://github.com/32ethers/SlimClip/blob/main/packaging/INSTALL.md) · [Windows 11 checklist](https://github.com/32ethers/SlimClip/blob/main/tests/windows11-acceptance.md).

@@ -17,6 +17,7 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        Loc.Configure(Settings.Load().Language);
         var command = Parse(args);
         using var mutex = new Mutex(true, MutexName, out bool first);
         if (!first)
@@ -35,7 +36,7 @@ internal static class Program
                 catch (IOException) { Thread.Sleep(100); }
                 catch (TimeoutException) { Thread.Sleep(100); }
             }
-            MessageBox.Show("无法连接现有 SlimClip 窗口，请稍后重试。", "SlimClip");
+            MessageBox.Show(Loc.T("instance.connect.failed"), "SlimClip");
             return;
         }
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };

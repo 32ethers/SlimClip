@@ -17,18 +17,18 @@ internal static class Compression
     public static async Task<CompressionResult> RunAsync(CompressionRequest request, Preset preset,
         Settings settings, bool allowExtraTrackOmission, Action<double> progress, CancellationToken cancellation)
     {
-        if (!IsSupported(request.File)) throw new IOException("视频文件不存在或扩展名不受支持。");
+        if (!IsSupported(request.File)) throw new IOException(Loc.T("compression.unsupported"));
         if (preset.Crf is < 0 or > 51 || preset.MaxHeight < 0 ||
-            (preset.MaxHeight != 0 && preset.MaxHeight % 2 != 0)) throw new ArgumentException("压缩档位参数无效。");
+            (preset.MaxHeight != 0 && preset.MaxHeight % 2 != 0)) throw new ArgumentException(Loc.T("compression.invalid.preset"));
         // Lock before probing so the probed tracks are the same file FFmpeg will read.
         using var sourceLease = new FileStream(request.File, FileMode.Open, FileAccess.Read, FileShare.Read);
         var media = await MediaTools.ProbeAsync(request.File, cancellation);
         if (media.SubtitleCount + media.AncillaryCount > 0)
         {
             if (settings.SaveMode == SaveMode.Replace)
-                throw new IOException("源文件含字幕、额外视频轨或数据轨，首版无法保留；禁止替换原文件，请改为另存。");
+                throw new IOException(Loc.T("compression.replace.tracks"));
             if (!allowExtraTrackOmission)
-                throw new IOException("源文件包含未处理轨道，必须先确认另存结果将不含这些轨道。");
+                throw new IOException(Loc.T("compression.confirm.tracks"));
         }
         var original = new FileInfo(request.File);
         long originalLength = original.Length;
@@ -38,7 +38,7 @@ internal static class Compression
         string destination = Path.Combine(directory, basename +
             (settings.SaveMode == SaveMode.Copy ? $"_slimclip_{request.Level}" : "") + ".mp4");
         if (settings.SaveMode == SaveMode.Replace && !SamePath(destination, request.File) && File.Exists(destination))
-            throw new IOException("目标 MP4 已存在，不能覆盖其他文件：" + destination);
+            throw new IOException(Loc.F("compression.target.exists", destination));
         string temp = Path.Combine(directory, $".slimclip-{Guid.NewGuid():N}.mp4");
         try
         {
@@ -61,7 +61,7 @@ internal static class Compression
                     }
                     await ffmpeg.WaitForExitAsync(cancellation);
                     string error = await errorTask;
-                    if (ffmpeg.ExitCode != 0) throw new IOException("FFmpeg 转换失败：" + error.Trim());
+                    if (ffmpeg.ExitCode != 0) throw new IOException(Loc.F("compression.ffmpeg.failed", error.Trim()));
                 }
                 catch (OperationCanceledException)
                 {
@@ -72,18 +72,18 @@ internal static class Compression
                 }
             }
             cancellation.ThrowIfCancellationRequested();
-            if (!File.Exists(temp) || new FileInfo(temp).Length == 0) throw new IOException("FFmpeg 未生成有效结果。");
+            if (!File.Exists(temp) || new FileInfo(temp).Length == 0) throw new IOException(Loc.T("compression.no.output"));
             var encoded = await MediaTools.ProbeAsync(temp, cancellation);
             if (encoded.VideoCodec != "hevc" || encoded.Audio.Count != media.Audio.Count ||
                 encoded.Audio.Any(x => x.Codec != "aac") || encoded.SubtitleCount != 0 || encoded.AncillaryCount != 0 || encoded.Duration <= 0 ||
                 (media.Duration > 0 && Math.Abs(encoded.Duration - media.Duration) > Math.Max(1, media.Duration * 0.03)))
-                throw new IOException("输出轨道或时长校验失败，原片未改动。");
+                throw new IOException(Loc.T("compression.verify.failed"));
             sourceLease.Dispose(); // Release before replacing/renaming the source on Windows.
             var currentSource = new FileInfo(request.File);
             if (!currentSource.Exists || currentSource.Length != originalLength || currentSource.LastWriteTimeUtc != originalWriteTime)
-                throw new IOException("源视频在压缩期间发生变化，结果未保存。");
+                throw new IOException(Loc.T("compression.source.changed"));
             if (settings.SkipLargerResult && new FileInfo(temp).Length >= originalLength)
-                return new CompressionResult("结果未缩小，原文件未改动。", false);
+                return new CompressionResult(Loc.T("compression.not.smaller"), false);
             // Commit begins here. Cancellation after this check cannot interrupt an atomic
             // replace or the paired rename/rollback steps without risking an orphaned source.
             cancellation.ThrowIfCancellationRequested();
@@ -103,7 +103,7 @@ internal static class Compression
             }
             else
             {
-                if (File.Exists(destination)) throw new IOException("目标 MP4 已存在：" + destination);
+                if (File.Exists(destination)) throw new IOException(Loc.F("compression.target.exists.short", destination));
                 string backup = BackupPath(request.File);
                 string journal = RecoveryJournal.Add(request.File, destination, backup);
                 File.Move(request.File, backup);
@@ -111,15 +111,15 @@ internal static class Compression
                 catch
                 {
                     try { File.Move(backup, request.File); RecoveryJournal.Complete(journal); }
-                    catch (Exception ex) { throw new IOException($"回滚失败！原片备份保存在 {backup}：{ex.Message}", ex); }
+                    catch (Exception ex) { throw new IOException(Loc.F("compression.rollback.failed", backup, ex.Message), ex); }
                     throw;
                 }
                 if (!TryDelete(backup)) leftoverBackup = backup;
                 else RecoveryJournal.Complete(journal);
             }
             progress(1);
-            return new CompressionResult(leftoverBackup is null ? "已保存：" + destination :
-                $"已保存：{destination}；旧文件备份需手动清理：{leftoverBackup}", true);
+            return new CompressionResult(leftoverBackup is null ? Loc.F("compression.saved", destination) :
+                Loc.F("compression.saved.backup", destination, leftoverBackup), true);
         }
         finally { TryDelete(temp); }
     }

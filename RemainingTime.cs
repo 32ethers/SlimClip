@@ -23,23 +23,23 @@ internal sealed class RemainingTime
     internal static string Format(double fraction, double elapsedSeconds)
     {
         if (!double.IsFinite(fraction) || !double.IsFinite(elapsedSeconds) || elapsedSeconds < 0 ||
-            fraction < 0 || fraction > 1) return "计算中…";
-        if (fraction >= 1) return "已完成";
+            fraction < 0 || fraction > 1) return Loc.T("eta.calculating");
+        if (fraction >= 1) return Loc.T("eta.done");
         // After encoding, verification/safe saving can take unknown time.
-        if (fraction >= 0.99) return "收尾中…";
+        if (fraction >= 0.99) return Loc.T("eta.finishing");
         // Early FFmpeg timestamps are noisy; a numerical estimate would be misleading.
-        if (elapsedSeconds < 3 || fraction < 0.05) return "计算中…";
+        if (elapsedSeconds < 3 || fraction < 0.05) return Loc.T("eta.calculating");
         double remaining = elapsedSeconds * (1 - fraction) / fraction;
-        if (!double.IsFinite(remaining) || remaining < 0) return "计算中…";
+        if (!double.IsFinite(remaining) || remaining < 0) return Loc.T("eta.calculating");
         // Avoid an unbounded or nonsensical extrapolation on badly timed/slow inputs.
-        if (remaining > 7 * 24 * 3600) return "超过 7 天";
+        if (remaining > 7 * 24 * 3600) return Loc.T("eta.over.week");
         var duration = TimeSpan.FromSeconds(Math.Max(1, Math.Ceiling(remaining)));
-        if (duration.TotalDays >= 1) return duration.Hours == 0 ? $"约 {(int)duration.TotalDays} 天" :
-            $"约 {(int)duration.TotalDays} 天 {duration.Hours} 小时";
-        if (duration.TotalHours >= 1) return duration.Minutes == 0 ? $"约 {(int)duration.TotalHours} 小时" :
-            $"约 {(int)duration.TotalHours} 小时 {duration.Minutes} 分";
-        if (duration.TotalMinutes >= 1) return duration.Seconds == 0 ? $"约 {(int)duration.TotalMinutes} 分" :
-            $"约 {(int)duration.TotalMinutes} 分 {duration.Seconds} 秒";
-        return $"约 {duration.Seconds} 秒";
+        if (duration.TotalDays >= 1) return duration.Hours == 0 ? Loc.F("eta.days", (int)duration.TotalDays) :
+            Loc.F("eta.days.hours", (int)duration.TotalDays, duration.Hours);
+        if (duration.TotalHours >= 1) return duration.Minutes == 0 ? Loc.F("eta.hours", (int)duration.TotalHours) :
+            Loc.F("eta.hours.minutes", (int)duration.TotalHours, duration.Minutes);
+        if (duration.TotalMinutes >= 1) return duration.Seconds == 0 ? Loc.F("eta.minutes", (int)duration.TotalMinutes) :
+            Loc.F("eta.minutes.seconds", (int)duration.TotalMinutes, duration.Seconds);
+        return Loc.F("eta.seconds", duration.Seconds);
     }
 }

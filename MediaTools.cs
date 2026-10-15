@@ -11,24 +11,33 @@ internal sealed record MediaInfo(int VideoStreamIndex, string VideoCodec, int He
 
 internal static class MediaTools
 {
-    internal static string Executable(string tool)
+    internal static string Executable(string tool) => ResolveTool(tool,
+        Settings.Load().FfmpegDirectory, FfmpegSetup.ToolsDirectory,
+        Environment.GetEnvironmentVariable("PATH"),
+        System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "SlimClip.Tests"
+            ? AppContext.BaseDirectory : null);
+
+    // Injectable directories allow precedence and PATH fallback to be exercised without
+    // mutating a real user's settings or PATH. testToolsDir is never set in the public app.
+    internal static string ResolveTool(string tool, string? selected, string localToolsDir,
+        string? path, string? testToolsDir = null)
     {
-        if (tool is not ("ffmpeg" or "ffprobe")) throw new ArgumentException("未知媒体工具。", nameof(tool));
-        string? selected = Settings.Load().FfmpegDirectory;
+        if (tool is not ("ffmpeg" or "ffprobe")) throw new ArgumentException(Loc.T("media.unknown.tool"), nameof(tool));
         if (!string.IsNullOrWhiteSpace(selected))
         {
             if (!FfmpegSetup.HasTools(selected))
-                throw new IOException("设置的 FFmpeg 目录缺少 ffmpeg.exe 或 ffprobe.exe；请在设置中重新选择目录。");
-            return Path.Combine(selected, tool + ".exe");
+                throw new IOException(Loc.T("media.configured.missing"));
+            return Path.Combine(Path.GetFullPath(selected), tool + ".exe");
         }
-        if (FfmpegSetup.HasTools(FfmpegSetup.ToolsDirectory))
-            return Path.Combine(FfmpegSetup.ToolsDirectory, tool + ".exe");
-        // The standalone integration-test executable stages its own tools in its output folder.
-        // Never search the application directory in a public SlimClip installation or use PATH.
-        if (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "SlimClip.Tests" &&
-            FfmpegSetup.HasTools(AppContext.BaseDirectory))
-            return Path.Combine(AppContext.BaseDirectory, tool + ".exe");
-        throw new IOException("尚未配置 FFmpeg。请在首次任务中同意下载，或在设置中指定已有 FFmpeg 目录。");
+        if (FfmpegSetup.HasTools(localToolsDir))
+            return Path.Combine(Path.GetFullPath(localToolsDir), tool + ".exe");
+        // Only standalone integration tests stage their own tools in their output directory.
+        // Never search the public application's directory or execute a relative name.
+        if (testToolsDir is not null && FfmpegSetup.HasTools(testToolsDir))
+            return Path.Combine(Path.GetFullPath(testToolsDir), tool + ".exe");
+        string? fromPath = FfmpegSetup.FindOnPath(path);
+        if (fromPath is not null) return Path.Combine(fromPath, tool + ".exe");
+        throw new IOException(Loc.T("media.not.found"));
     }
 
     internal static Process Start(string tool, IEnumerable<string> arguments)
@@ -39,9 +48,9 @@ internal static class MediaTools
             RedirectStandardOutput = true, RedirectStandardError = true
         };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
-        try { return Process.Start(psi) ?? throw new IOException($"无法启动 {tool}。"); }
+        try { return Process.Start(psi) ?? throw new IOException(Loc.F("media.start.null", tool)); }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
-        { throw new IOException($"无法启动 {tool}.exe：{ex.Message}。请在设置中检查 FFmpeg 目录或重新下载。", ex); }
+        { throw new IOException(Loc.F("media.start.failed", tool, ex.Message), ex); }
     }
 
     internal static CancellationTokenRegistration KillOnCancel(Process process, CancellationToken cancellation) =>
@@ -62,7 +71,7 @@ internal static class MediaTools
         {
             await process.WaitForExitAsync(cancellation);
             var error = await stderr;
-            if (process.ExitCode != 0) throw new IOException($"{tool} 失败：{error.Trim()}");
+            if (process.ExitCode != 0) throw new IOException(Loc.F("media.tool.failed", tool, error.Trim()));
             return await stdout;
         }
         catch (OperationCanceledException)
@@ -79,7 +88,7 @@ internal static class MediaTools
         var json = await CaptureAsync("ffprobe", new[] { "-v", "error", "-show_streams", "-show_format", "-of", "json", path }, cancellation);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
-        if (!root.TryGetProperty("streams", out var streams)) throw new IOException("无法读取媒体轨道。");
+        if (!root.TryGetProperty("streams", out var streams)) throw new IOException(Loc.T("media.tracks.unreadable"));
         int videoIndex = -1, height = 0, subtitles = 0, ancillary = 0;
         string codec = "";
         var audio = new List<AudioTrack>();
@@ -106,7 +115,7 @@ internal static class MediaTools
             else if (type == "subtitle") subtitles++;
             else ancillary++;
         }
-        if (videoIndex < 0 || height < 1) throw new IOException("未找到可处理的视频轨道。");
+        if (videoIndex < 0 || height < 1) throw new IOException(Loc.T("media.video.missing"));
         double duration = 0;
         if (root.TryGetProperty("format", out var format) && format.TryGetProperty("duration", out var d))
             double.TryParse(d.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out duration);

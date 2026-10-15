@@ -12,23 +12,22 @@ internal static class Estimator
     public static async Task<List<Estimate>> RunAsync(string file, Settings settings,
         Action<string, double?> status, CancellationToken cancellation)
     {
-        if (!Compression.IsSupported(file)) throw new IOException("请选择支持的视频文件。");
-        status("探测视频轨道…", null);
+        if (!Compression.IsSupported(file)) throw new IOException(Loc.T("estimator.unsupported"));
+        status(Loc.T("estimator.probing"), null);
         var media = await MediaTools.ProbeAsync(file, cancellation);
-        if (media.Duration <= 0) throw new IOException("无法获取视频时长，不能估算。");
+        if (media.Duration <= 0) throw new IOException(Loc.T("estimator.no.duration"));
         double sample = Math.Min(8, media.Duration);
         double start = Math.Max(0, (media.Duration - sample) / 2);
         string folder = Path.Combine(Path.GetTempPath(), "SlimClip-estimate-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         var results = new List<Estimate>();
         var levels = new[] { "low", "medium", "high" };
-        var labels = new[] { "低", "中", "高" };
         try
         {
             for (int index = 0; index < levels.Length; index++)
             {
                 cancellation.ThrowIfCancellationRequested();
-                string label = $"评估 {labels[index]}（{index + 1}/3）";
+                string label = Loc.F("estimator.stage", Loc.T("level." + levels[index]), index + 1);
                 status(label, index / 3.0);
                 string output = Path.Combine(folder, levels[index] + ".mp4");
                 var args = new List<string> { "-hide_banner", "-nostdin", "-loglevel", "error",
@@ -51,7 +50,7 @@ internal static class Estimator
                         }
                         await process.WaitForExitAsync(cancellation);
                         string error = await errorTask;
-                        if (process.ExitCode != 0) throw new IOException("预估编码失败：" + error.Trim());
+                        if (process.ExitCode != 0) throw new IOException(Loc.F("estimator.encode.failed", error.Trim()));
                     }
                     catch (OperationCanceledException)
                     {
@@ -62,10 +61,10 @@ internal static class Estimator
                     }
                 }
                 if (!File.Exists(output) || new FileInfo(output).Length == 0)
-                    throw new IOException("评估片段未生成。");
+                    throw new IOException(Loc.T("estimator.no.output"));
                 double projected = new FileInfo(output).Length * media.Duration / sample;
                 if (!double.IsFinite(projected) || projected < 0 || projected > long.MaxValue)
-                    throw new IOException("视频过长或文件过大，无法可靠估算。");
+                    throw new IOException(Loc.T("estimator.too.large"));
                 results.Add(new Estimate(levels[index], (long)projected, sample));
                 status(label, (index + 1) / 3.0);
             }

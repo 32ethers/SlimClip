@@ -10,10 +10,12 @@
     <AssemblyName>SlimClip</AssemblyName>
     <RootNamespace>SlimClip</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>assets/SlimClip.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <!-- SDK globbing otherwise compiles the standalone console tests into the WPF app. -->
     <Compile Remove="tests/**/*.cs" />
     <InternalsVisibleTo Include="SlimClip.Tests" />
+    <Resource Include="assets/SlimClip.ico" />
   </ItemGroup>
 </Project>
