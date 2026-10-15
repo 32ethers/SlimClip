@@ -4,12 +4,13 @@
 param(
     [string] $IsccPath,
     [ValidatePattern('^\d+\.\d+\.\d+$')][string] $Version = '1.0.0',
-    [string] $OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts')
+    [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $root = [System.IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { $OutputDirectory = Join-Path $root 'artifacts' }
 $output = [System.IO.Path]::GetFullPath($OutputDirectory)
 $setup = Join-Path $output 'SlimClip-Setup.exe'
 $stage = Join-Path $output ('exe-stage-' + [guid]::NewGuid().ToString('N'))
