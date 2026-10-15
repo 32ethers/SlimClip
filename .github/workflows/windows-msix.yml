@@ -1,8 +1,8 @@
 name: Windows 11 MSIX test build
 
 # Pin a versioned upstream FFmpeg archive + upstream SHA-256. Updating the
-# binary requires an explicit source review and commit. No build uploads
-# GPL FFmpeg-containing binaries until Corresponding Source is verified.
+# binary requires an explicit source review and commit. Never upload GPLv3
+# FFmpeg binaries in a PUBLIC repo before Corresponding Source is verified.
 on:
   push:
     branches: [main]
@@ -124,7 +124,7 @@ jobs:
           }
 
       # This Windows Server runner can exercise the MSIX deployment APIs, but
-      # cannot demonstrate the Windows 11 Explorer menu UI. Push builds never upload packages.
+      # cannot demonstrate the Windows 11 Explorer menu UI. Ordinary pushes never upload packages.
       - name: Install and uninstall signed MSIX on disposable runner
         run: |
           $ErrorActionPreference = 'Stop'
@@ -136,10 +136,10 @@ jobs:
             throw
           }
 
-      # Only an explicit manual run in a PRIVATE repository may upload the GPLv3
-      # FFmpeg-containing package. Never upload a private key or a public-repo binary.
+      # Only a manual run or a specially marked push in a PRIVATE repository
+      # may upload GPLv3 FFmpeg binaries. Never upload a private key/public-repo binary.
       - name: Upload PRIVATE test-signed MSIX and public certificate
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private == true && success() }}
+        if: ${{ github.event.repository.private == true && success() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[private-test-msix]'))) }}
         uses: actions/upload-artifact@v4
         with:
           name: SlimClip-PRIVATE-TEST-SIGNED-TRUST-CERT-FIRST
@@ -150,5 +150,5 @@ jobs:
           retention-days: 3
 
       - name: Explain skipped upload in public repository
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private != true }}
+        if: ${{ github.event.repository.private != true && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[private-test-msix]')) }}
         run: Write-Host '::notice::Public repository: test MSIX containing FFmpeg is deliberately not uploaded.'
