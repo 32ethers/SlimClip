@@ -52,6 +52,7 @@ jobs:
           [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "bin_dir=$binDir`n", $utf8)
 
       - name: Smoke-test H.265 and audio streams with test-only FFmpeg
+        id: smoke
         env:
           FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
         run: |
@@ -60,6 +61,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'FFmpeg smoke tests failed' }
 
       - name: Run .NET video-engine integration tests
+        id: engine
         env:
           SLIMCLIP_FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
         run: |
@@ -67,6 +69,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Video-engine integration tests failed' }
 
       - name: Locate or install Inno Setup compiler on disposable runner
+        id: inno
         run: |
           $ErrorActionPreference = 'Stop'
           $iscc = $null
@@ -88,6 +91,7 @@ jobs:
           Write-Host ('Using Inno Setup compiler: ' + $iscc + ' (' + (Get-Item -LiteralPath $iscc).VersionInfo.FileVersion + ')')
 
       - name: Build FFmpeg-free classic-menu EXE installer
+        id: package
         run: |
           $ErrorActionPreference = 'Stop'
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -117,10 +121,12 @@ jobs:
       # No certificates or administrator trust changes. An actual Windows 11
       # File Explorer visual test must still be done on a Windows 11 client PC.
       - name: Install and uninstall classic-menu EXE on disposable runner
+        id: install
         run: |
           $ErrorActionPreference = 'Stop'
+          $log = Join-Path $env:RUNNER_TEMP 'SlimClip-exe-install.log'
           try {
-            & .\tests\exe-install-smoke.ps1 -InstallerPath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip-Setup.exe')
+            & .\tests\exe-install-smoke.ps1 -InstallerPath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip-Setup.exe') *>&1 | Tee-Object -FilePath $log
           } catch {
             $detail = ($_ | Out-String) -replace '[%\r\n]', ' '
             Write-Host ('::error::EXE install/uninstall: ' + $detail.Substring(0, [Math]::Min(800, $detail.Length)))
@@ -128,9 +134,87 @@ jobs:
           }
 
       - name: Upload FFmpeg-free unsigned EXE installer
+        id: installer
         uses: actions/upload-artifact@v4
         with:
           name: SlimClip-EXE-Installer-NO-FFMPEG
           path: artifacts/SlimClip-Setup.exe
           if-no-files-found: error
           retention-days: 7
+
+      # The build job has only read permissions, even while it executes upstream
+      # FFmpeg binaries. The report is deliberately tiny and excludes secrets.
+      - name: Summarize redacted CI results
+        if: ${{ always() && github.event.repository.private == true }}
+        env:
+          STEP_FFMPEG: ${{ steps.ffmpeg.outcome }}
+          STEP_SMOKE: ${{ steps.smoke.outcome }}
+          STEP_ENGINE: ${{ steps.engine.outcome }}
+          STEP_INNO: ${{ steps.inno.outcome }}
+          STEP_PACKAGE: ${{ steps.package.outcome }}
+          STEP_INSTALL: ${{ steps.install.outcome }}
+          STEP_INSTALLER: ${{ steps.installer.outcome }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $env:RUNNER_TEMP 'SlimClip-ci-diagnostics'
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          $logs = [ordered]@{}
+          foreach ($name in @('build','install')) {
+            $path = Join-Path $env:RUNNER_TEMP ('SlimClip-exe-' + $name + '.log')
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            $logs[$name] = @(Get-Content -LiteralPath $path -Tail 45 | Where-Object {
+              $_ -notmatch '(?i)(authorization|password|secret|token|ghp_|github_pat_|bearer )'
+            } | ForEach-Object { $_.Substring(0, [Math]::Min(300, $_.Length)) })
+          }
+          $summary = [ordered]@{
+            run = $env:GITHUB_RUN_ID; commit = $env:GITHUB_SHA
+            steps = [ordered]@{
+              ffmpeg = $env:STEP_FFMPEG; smoke = $env:STEP_SMOKE; engine = $env:STEP_ENGINE
+              inno = $env:STEP_INNO; package = $env:STEP_PACKAGE
+              install = $env:STEP_INSTALL; installer = $env:STEP_INSTALLER
+            }
+            log_tails = $logs
+          }
+          $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $directory 'status.json') -Encoding UTF8
+
+      - name: Transfer sanitized CI report to the reporter job
+        if: ${{ always() && github.event.repository.private == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/SlimClip-ci-diagnostics/status.json
+          if-no-files-found: error
+          retention-days: 3
+
+  # Separate job is the only place with repository write access. No FFmpeg
+  # executable is ever run here. Its branch does not trigger the main CI workflow.
+  report:
+    needs: build
+    if: ${{ always() && github.event.repository.private == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-diagnostics-${{ github.run_id }}
+          path: ci-report
+      - name: Push redacted status to private ci-diagnostics branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          blob=$(git hash-object -w ci-report/status.json)
+          tree=$(printf '100644 blob %s\tstatus.json\n' "$blob" | git mktree)
+          parent=$(git ls-remote origin refs/heads/ci-diagnostics | awk '{print $1}')
+          if [ -n "$parent" ]; then
+            git fetch --quiet origin refs/heads/ci-diagnostics
+            git cat-file -e "$parent^{commit}"
+            commit=$(git -c user.name='SlimClip CI' -c user.email='ci@users.noreply.github.com' commit-tree "$tree" -p "$parent" -m "CI report ${{ github.run_id }}")
+          else
+            commit=$(git -c user.name='SlimClip CI' -c user.email='ci@users.noreply.github.com' commit-tree "$tree" -m "CI report ${{ github.run_id }}")
+          fi
+          git push origin "$commit:refs/heads/ci-diagnostics"

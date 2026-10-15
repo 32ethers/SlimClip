@@ -15,6 +15,6 @@
 
 ## GitHub Actions 与重新公开
 
-CI 的 FFmpeg 仅作为隔离 runner 的测试输入：从固定的 [Gyan ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)下载、验证 [SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)，运行音轨/引擎测试；随后**只上传不含 FFmpeg 的 EXE 安装器**。构建脚本拒绝将名为 `ffmpeg.exe`、`ffprobe.exe` 的文件放进安装载荷，隔离安装测试再次检查。SlimClip 自有代码采用 [MIT](../LICENSE)，上游 FFmpeg GPLv3 独立遵守其条款；若未来决定捆绑上游二进制，先完成[对应源码审计](FFMPEG-SOURCE-AUDIT.md)。Inno Setup 安装引擎来自[其官方项目](https://jrsoftware.org/)，其[许可](https://jrsoftware.org/files/is/license.txt)允许用于软件分发。
+CI 的 FFmpeg 仅作为隔离 runner 的测试输入：从固定的 [Gyan ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)下载、验证 [SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)，运行音轨/引擎测试；随后**只上传不含 FFmpeg 的 EXE 安装器**。构建脚本拒绝将名为 `ffmpeg.exe`、`ffprobe.exe` 的文件放进安装载荷，隔离安装测试再次检查。SlimClip 自有代码采用 [MIT](../LICENSE)，上游 FFmpeg GPLv3 独立遵守其条款；若未来决定捆绑上游二进制，先完成[对应源码审计](FFMPEG-SOURCE-AUDIT.md)。Inno Setup 安装引擎来自[其官方项目](https://jrsoftware.org/)，其[许可](https://jrsoftware.org/files/is/license.txt)允许用于软件分发。仓库保持 private 时，CI 的独立只读构建任务会把脱敏步骤结果与最多 45 行构建/安装尾部日志传给独立的可写报告任务，写入 `ci-diagnostics` 分支的 `status.json`；报告不包含二进制或令牌，不在主分支触发循环构建，供有 Git SSH 权限的维护者排错。
 
 **仓库所有者把 private 改回 public 前**，必须先在 Actions 页面删除此前私有运行中名为 `SlimClip-PRIVATE-TEST-SIGNED-TRUST-CERT-FIRST`、包含 GPLv3 静态 FFmpeg 的旧 MSIX 产物（包括所有历史运行）；单改仓库可见性不会自动删除旧产物或撤回外部已下载的副本。旧 MSIX 构建脚本/工作流已经从当前分支移除，但历史下载仍须处理。公开新版 EXE 是另一步，不能用旧版 MSIX 测试成绩冒充新版验收。
