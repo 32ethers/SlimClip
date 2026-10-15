@@ -22,6 +22,6 @@ Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.
 
 ## 许可与公开仓库
 
-SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。FFmpeg **不是 MIT**，是用户从上游直接获取的独立 GPLv3 软件；将来如果打算捆绑公开分发二进制，仍须核查[完整对应源码与分发义务](packaging/FFMPEG-SOURCE-AUDIT.md)。在把旧私有测试仓库改回 public **之前**，必须从 Actions 中删除旧版含 FFmpeg 的 MSIX 测试产物；即使改回 private 也无法收回已下载的文件。
+SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。FFmpeg **不是 MIT**，是用户从上游直接获取的独立 GPLv3 软件；将来如果打算捆绑公开分发二进制，仍须核查[完整对应源码与分发义务](packaging/FFMPEG-SOURCE-AUDIT.md)。在把旧私有测试仓库改回 public **之前**，必须删除临时 `ci-diagnostics` 分支及从 Actions 中删除旧版含 FFmpeg 的 MSIX 测试产物；即使改回 private 也无法收回已下载的文件。
 
 经典菜单设计依据：[微软创建快捷菜单处理程序](https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers)。

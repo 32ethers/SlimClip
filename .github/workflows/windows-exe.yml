@@ -158,13 +158,22 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $directory = Join-Path $env:RUNNER_TEMP 'SlimClip-ci-diagnostics'
           New-Item -ItemType Directory -Path $directory -Force | Out-Null
-          $logs = [ordered]@{}
+          # Persist only strict diagnostics, never arbitrary log lines or file paths.
+          $diagnostics = [ordered]@{}
           foreach ($name in @('build','install')) {
             $path = Join-Path $env:RUNNER_TEMP ('SlimClip-exe-' + $name + '.log')
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
-            $logs[$name] = @(Get-Content -LiteralPath $path -Tail 45 | Where-Object {
-              $_ -notmatch '(?i)(authorization|password|secret|token|ghp_|github_pat_|bearer )'
-            } | ForEach-Object { $_.Substring(0, [Math]::Min(300, $_.Length)) })
+            $text = (Get-Content -LiteralPath $path -Tail 80) -join "`n"
+            $diagnostics[$name] = [ordered]@{
+              compiler_codes = @([regex]::Matches($text, '(?i)\b(?:CS|C|LNK|MSB)\d{4}\b') |
+                ForEach-Object { $_.Value.ToUpperInvariant() } | Sort-Object -Unique | Select-Object -First 12)
+              powershell_error_ids = @([regex]::Matches($text, '(?m)FullyQualifiedErrorId\s*:\s*([A-Za-z][A-Za-z0-9_.-]{0,80})') |
+                ForEach-Object { $_.Groups[1].Value } |
+                Where-Object { $_ -in @('ParameterArgumentValidationErrorEmptyStringNotAllowed','NativeCommandError','CommandNotFoundException','OperationStopped','InvalidData','ScriptHalted','ResourceUnavailable') } |
+                Sort-Object -Unique | Select-Object -First 8)
+              exit_codes = @([regex]::Matches($text, '(?i)\bexit code\s*[:=]?\s*(\d{1,5})\b') |
+                ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique | Select-Object -First 8)
+            }
           }
           $summary = [ordered]@{
             run = $env:GITHUB_RUN_ID; commit = $env:GITHUB_SHA
@@ -173,7 +182,7 @@ jobs:
               inno = $env:STEP_INNO; package = $env:STEP_PACKAGE
               install = $env:STEP_INSTALL; installer = $env:STEP_INSTALLER
             }
-            log_tails = $logs
+            diagnostics = $diagnostics
           }
           $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $directory 'status.json') -Encoding UTF8
 
@@ -200,10 +209,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        id: retrieve
+        continue-on-error: true
         with:
           name: ci-diagnostics-${{ github.run_id }}
           path: ci-report
-      - name: Push redacted status to private ci-diagnostics branch
+      - name: Prepare fallback status if diagnostics artifact is unavailable
+        if: ${{ always() }}
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f ci-report/status.json ]; then
+            mkdir -p ci-report
+            printf '{"run":"%s","commit":"%s","build_job":"%s","diagnostics":"artifact-unavailable"}\n' \
+              '${{ github.run_id }}' '${{ github.sha }}' "$BUILD_RESULT" > ci-report/status.json
+            echo '::warning::CI diagnostics artifact unavailable; publishing only job result.'
+          fi
+      - name: Push structured status to private ci-diagnostics branch
         shell: bash
         run: |
           set -euo pipefail

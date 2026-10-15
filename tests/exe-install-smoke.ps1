@@ -20,10 +20,10 @@ if (@(Find-UninstallEntries).Count -ne 0) { throw 'Runner already has a SlimClip
 if ((Test-Path -LiteralPath $installDir) -or (Test-Path -LiteralPath $verb) -or (Test-Path -LiteralPath $com)) {
     throw 'Runner already contains SlimClip installation/registration; refusing to overwrite.'
 }
-$installer = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-') -PassThru -Wait
-if ($installer.ExitCode -ne 0) { throw "Inno Setup failed with exit code $($installer.ExitCode)" }
 $uninstaller = Join-Path $installDir 'unins000.exe'
 try {
+    $installer = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-') -PassThru -Wait
+    if ($installer.ExitCode -ne 0) { throw "Inno Setup failed with exit code $($installer.ExitCode)" }
     foreach ($name in @('SlimClip.exe','SlimClipCommand.dll','LICENSE.txt','unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDir $name) -PathType Leaf)) { throw "Installed file missing: $name" }
     }
