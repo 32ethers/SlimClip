@@ -61,12 +61,18 @@ Push-Location $native
 try {
     $definition = '/DEF:' + (Join-Path $root 'shell\SlimClipCommand.def')
     $dll = Join-Path $stage 'SlimClipCommand.dll'
-    & $cl /nologo /W4 /EHsc /std:c++17 /utf-8 /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link ('/OUT:' + $dll) $definition shlwapi.lib shell32.lib ole32.lib
+    & $cl /nologo /W4 /EHsc /std:c++17 /utf-8 /MT /LD (Join-Path $root 'shell\SlimClipCommand.cpp') /link ('/OUT:' + $dll) $definition shlwapi.lib shell32.lib ole32.lib
     Require-Exit 'x64 Explorer COM DLL compilation'
     $exports = & $dumpbin /exports $dll
     Require-Exit 'COM export inspection'
     if (-not ($exports | Select-String 'DllGetClassObject') -or -not ($exports | Select-String 'DllCanUnloadNow')) {
         throw 'Native DLL lacks required COM exports'
+    }
+    # Explorer must load the DLL on a clean Windows 11 PC without a VC++ redistributable.
+    $dependencies = & $dumpbin /dependents $dll
+    Require-Exit 'Native runtime dependency inspection'
+    if (@($dependencies | Select-String -Pattern '(?i)\b(VCRUNTIME|MSVCP|ucrtbase)[\w.-]*\.dll\b').Count) {
+        throw 'Explorer DLL unexpectedly depends on a separately installed VC++ runtime'
     }
     $selfTest = Join-Path $native 'SlimClipCommandSelfTest.exe'
     & $cl /nologo /W4 /EHsc /std:c++17 /utf-8 (Join-Path $root 'shell\SlimClipCommandSelfTest.cpp') /link ('/OUT:' + $selfTest) ole32.lib uuid.lib

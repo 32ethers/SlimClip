@@ -13,7 +13,7 @@
 
 1. WPF/.NET 8 主程序自包含 win-x64；Inno Setup 编译 per-user 安装 EXE，在 HKCU 下注册经典菜单 COM 及软件卸载项，不要求管理员权限、MSIX 身份或安装自签证书。**未签名 EXE 仍可能触发 SmartScreen 警告；不能声称 Windows 完全无安全提示。** 卸载仅移除自己安装的程序文件、快捷方式与菜单注册，保留用户视频、结果、设置及已下载工具。
 2. **公开安装 EXE 不包含 FFmpeg/ffprobe 二进制。** 首次压缩/预估前明确征得用户同意，由用户机器从 [Gyan 官方版本 ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)通过 HTTPS 下载，核对固定 SHA-256 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，只提取所需程序到当前用户 `%LOCALAPPDATA%\SlimClip\tools`。用户也可在设置中指定已有 ffmpeg.exe/ffprobe.exe 的绝对目录；拒绝、离线、校验失败均不得处理源片。不从 PATH 随意寻找二进制。
-3. SlimClip 自有源码为 MIT；用户直接从上游获取的 FFmpeg 是另一款 GPLv3 软件，不能误称为 MIT。任何未来**由 SlimClip 项目公开捆绑分发** FFmpeg 二进制的方案仍须先完成[对应源码审计](packaging/FFMPEG-SOURCE-AUDIT.md)。此前私有 MSIX 测试产物应从 Actions 删除，**然后**仓库所有者再改回 public；重设可见性不会收回别人已下载的副本。
+3. SlimClip 自有源码为 MIT；用户直接从上游获取的 FFmpeg 是另一款 GPLv3 软件，不能误称为 MIT。任何未来**由 SlimClip 项目公开捆绑分发** FFmpeg 二进制的方案仍须先完成[对应源码审计](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已改回 public，旧私有 MSIX 测试产物曾短暂公开，但已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，公开 Actions 产物列表目前为 0；重设可见性与删除产物都无法收回此前可能被下载的副本。
 4. GitHub Actions 在 Windows runner 下载 FFmpeg **仅用于测试**（不上传），运行烟测和引擎测试，构建不含 FFmpeg 的 EXE，静态检查原生菜单后在一次性 runner 上安装/核对经典注册/卸载；Windows 11 Explorer 视觉效果、双击安装与真实音画同步仍需手工验收。验收清单见[Windows 11 测试](tests/windows11-acceptance.md)。
 
 ## 验收状态

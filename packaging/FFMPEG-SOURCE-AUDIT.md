@@ -5,7 +5,7 @@
 ## 被审计的旧二进制
 
 - [Gyan FFmpeg 8.1.2 essentials ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)，[上游 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256) 为 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，包括 ffmpeg.exe/ffprobe.exe。[Gyan 构建说明](https://www.gyan.dev/ffmpeg/builds/)称其是 GPLv3 静态构建，可能链接 x265、x264 等外部库。
-- 历史私有 MSIX 曾在 CI 内生成且可上传到**私有 Actions 产物**；从私有改 public 前必须删除全部这种含 FFmpeg 的旧产物。当前分支已取消其构建/上传；Git 历史保留构建方案并不等于当前 EXE 分发了二进制。
+- 历史私有 MSIX 曾在 CI 内生成并上传到**私有 Actions 产物**；仓库转 public 时该旧产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，公开产物列表目前为 0。不能撤回之前可能被下载的副本；当前分支已取消旧 MSIX 构建/上传，Git 历史保留构建方案并不等于当前 EXE 分发了二进制。
 
 ## 未来如果恢复捆绑分发，须先核实
 
