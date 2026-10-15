@@ -89,6 +89,13 @@ internal static class Program
         catch (Exception error)
         {
             Console.Error.WriteLine("FAIL first-use upstream download: " + error);
+            // A public check-run annotation lets maintainers diagnose failures without
+            // requiring anyone to copy private or browser-only Actions logs.
+            string detail = error.Message.Replace('%', ' ').Replace('\r', ' ').Replace('\n', ' ');
+            if (new[] { "token", "password", "secret", "authorization", "bearer" }.Any(word =>
+                detail.Contains(word, StringComparison.OrdinalIgnoreCase))) detail = "sensitive error detail withheld";
+            Console.Error.WriteLine("::error::First-use FFmpeg setup " + error.GetType().Name + ": " +
+                detail[..Math.Min(detail.Length, 500)]);
             return 1;
         }
         finally

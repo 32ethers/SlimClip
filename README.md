@@ -12,13 +12,13 @@ Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.
 
 ## 安装与 FFmpeg
 
-交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。[新版 CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38700214441)已构建并在一次性 Windows runner 上安装、核对经典菜单注册与卸载；在该次运行的 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）。Windows 11「显示更多选项」的实际视觉菜单仍待实机验收。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
+交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。[新版 CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)已构建并在一次性 Windows runner 上安装、核对经典菜单注册与卸载；在该次运行的 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）。Windows 11「显示更多选项」的实际视觉菜单仍待实机验收。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
 
 **公开安装包不含 FFmpeg/ffprobe**。首次处理视频时程序说明第三方 Gyan FFmpeg 的 GPLv3 许可，征得明确同意后让用户电脑直接从[上游](https://www.gyan.dev/ffmpeg/builds/)下载固定版本、核对 SHA-256 并保存到当前用户目录；也能在设置中选择已有工具目录。拒绝下载或校验失败不会动源视频。CI 虽使用上游 FFmpeg 进行测试，但不会上传它的二进制。
 
 ## 测试状态
 
-[新版 CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38700214441)通过 11 项视频引擎集成测试、FFmpeg 烟测、C++ COM 自测、FFmpeg-free EXE 构建及 Windows runner 的每用户安装／注册／卸载检查。**真实 Windows 11 Explorer 菜单、首次上游下载、多选/托盘交互及人工音画同步仍需单独验收**；CI 的注册检查不能冒充视觉验收。运行 FFmpeg 烟测：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1`；独立 .NET 测试需要 `SLIMCLIP_FFMPEG_DIR` 指向 FFmpeg/ffprobe 目录，执行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`。
+[新版 CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)通过 11 项视频引擎集成测试、FFmpeg 烟测、C++ COM 自测、程序实际向上游下载并校验/解压 FFmpeg、FFmpeg-free EXE 构建及 Windows runner 的每用户安装／注册／卸载检查。**真实 Windows 11 Explorer 菜单、首次授权弹窗、多选/托盘交互及人工音画同步仍需单独验收**；CI 的注册检查不能冒充视觉验收。运行 FFmpeg 烟测：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1`；独立 .NET 测试需要 `SLIMCLIP_FFMPEG_DIR` 指向 FFmpeg/ffprobe 目录，执行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`。
 
 ## 许可与公开仓库
 
