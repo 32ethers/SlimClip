@@ -10,6 +10,9 @@
 #ifndef LogoFile
   #error LogoFile must be supplied by build-exe.ps1
 #endif
+#ifndef TranslationFile
+  #error TranslationFile must be supplied by build-exe.ps1
+#endif
 
 [Setup]
 AppId={{266761BB-3916-45F4-9E9F-6E880324331E}
@@ -33,7 +36,7 @@ ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "chinesesimplified"; MessagesFile: "{#TranslationFile}"
 
 [CustomMessages]
 english.DesktopShortcut=Create a desktop shortcut

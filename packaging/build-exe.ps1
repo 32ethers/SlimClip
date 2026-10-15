@@ -82,8 +82,10 @@ try {
 } finally { Pop-Location }
 
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $stage 'LICENSE.txt')
+# The MIT notice accompanies the separate Simplified Chinese Inno translation embedded in Setup.
+Copy-Item -LiteralPath (Join-Path $root 'packaging\translations\LICENSE.txt') -Destination (Join-Path $stage 'INNO-CHINESE-TRANSLATION-LICENSE.txt')
 # The test runner and C++ intermediate files remain in exe-native-*, not the installer stage.
-& $iscc ('/DStageDir=' + $stage) ('/DAppVersion=' + $Version) ('/DLogoFile=' + (Join-Path $root 'assets\SlimClip.ico')) ('/O' + $output) '/FSlimClip-Setup' (Join-Path $PSScriptRoot 'SlimClip.iss')
+& $iscc ('/DStageDir=' + $stage) ('/DAppVersion=' + $Version) ('/DLogoFile=' + (Join-Path $root 'assets\SlimClip.ico')) ('/DTranslationFile=' + (Join-Path $root 'packaging\translations\ChineseSimplified.isl')) ('/O' + $output) '/FSlimClip-Setup' (Join-Path $PSScriptRoot 'SlimClip.iss')
 Require-Exit 'Inno Setup compilation'
 if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw "Missing expected installer: $setup" }
 Write-Host "Installer: $setup (unsigned; no bundled FFmpeg; no certificate/trust changes)"

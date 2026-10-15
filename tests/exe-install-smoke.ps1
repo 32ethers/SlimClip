@@ -27,7 +27,7 @@ $uninstaller = Join-Path $installDir 'unins000.exe'
 try {
     $installer = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',("/LANG=$Language")) -PassThru -Wait
     if ($installer.ExitCode -ne 0) { throw "Inno Setup failed with exit code $($installer.ExitCode)" }
-    foreach ($name in @('SlimClip.exe','SlimClipCommand.dll','LICENSE.txt','unins000.exe')) {
+    foreach ($name in @('SlimClip.exe','SlimClipCommand.dll','LICENSE.txt','INNO-CHINESE-TRANSLATION-LICENSE.txt','unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDir $name) -PathType Leaf)) { throw "Installed file missing: $name" }
     }
     if (@(Find-UninstallEntries).Count -ne 1) {
