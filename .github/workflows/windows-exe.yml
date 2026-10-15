@@ -66,12 +66,26 @@ jobs:
           dotnet run --project tests/SlimClip.Tests.csproj --configuration Release
           if ($LASTEXITCODE -ne 0) { throw 'Video-engine integration tests failed' }
 
-      - name: Install pinned Inno Setup compiler on disposable runner
+      - name: Locate or install Inno Setup compiler on disposable runner
         run: |
-          choco install innosetup --version=6.6.1 --yes --no-progress
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 6.6.1 installation failed' }
-          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
-          if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'Inno Setup ISCC.exe not found after install' }
+          $ErrorActionPreference = 'Stop'
+          $iscc = $null
+          foreach ($base in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+            if (-not $base) { continue }
+            $candidate = Join-Path $base 'Inno Setup 6\ISCC.exe'
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) { $iscc = $candidate; break }
+          }
+          if (-not $iscc) {
+            $existing = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+            if ($existing) { $iscc = $existing.Source }
+          }
+          if (-not $iscc) {
+            choco install innosetup --version=6.6.1 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 6.6.1 installation failed' }
+            $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          }
+          if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'Inno Setup ISCC.exe not found' }
+          Write-Host ('Using Inno Setup compiler: ' + $iscc + ' (' + (Get-Item -LiteralPath $iscc).VersionInfo.FileVersion + ')')
 
       - name: Build FFmpeg-free classic-menu EXE installer
         run: |
