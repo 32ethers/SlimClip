@@ -1,4 +1,4 @@
-// Windows 11 Explorer command extension. Build as an x64 native COM DLL.
+// Classic Windows 10/11 Explorer command extension. Build as an x64 native COM DLL.
 // Explorer must only enumerate lightweight commands; FFmpeg never runs in Explorer.
 #include <windows.h>
 #include <shobjidl.h>

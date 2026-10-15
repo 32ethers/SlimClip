@@ -1,0 +1,122 @@
+name: Windows classic-menu EXE installer
+
+# FFmpeg is downloaded solely for disposable CI media tests. The public installer
+# contains only MIT SlimClip code and the Inno Setup runtime, never FFmpeg binaries.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FFMPEG_URL: https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip
+  FFMPEG_SHA256: db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slimclip-exe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download pinned FFmpeg solely for engine tests
+        id: ffmpeg
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:FFMPEG_URL -notmatch '^https://[^\s]+$' -or $env:FFMPEG_SHA256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Invalid pinned FFmpeg source' }
+          $work = Join-Path $env:RUNNER_TEMP 'SlimClip-test-only-FFmpeg'
+          New-Item -ItemType Directory -Path $work -Force | Out-Null
+          $archive = Join-Path $work 'ffmpeg.zip'
+          Invoke-WebRequest -Uri $env:FFMPEG_URL -OutFile $archive
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if ($actual -ine $env:FFMPEG_SHA256) { throw "FFmpeg test ZIP hash mismatch: $actual" }
+          $expanded = Join-Path $work 'expanded'
+          Expand-Archive -LiteralPath $archive -DestinationPath $expanded
+          $binary = @(Get-ChildItem -LiteralPath $expanded -Recurse -File -Filter 'ffmpeg.exe')
+          if ($binary.Count -ne 1) { throw 'ZIP must have exactly one ffmpeg.exe' }
+          $binDir = $binary[0].DirectoryName
+          if (-not (Test-Path -LiteralPath (Join-Path $binDir 'ffprobe.exe') -PathType Leaf)) { throw 'ffprobe.exe must be beside ffmpeg.exe' }
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "bin_dir=$binDir`n", $utf8)
+
+      - name: Smoke-test H.265 and audio streams with test-only FFmpeg
+        env:
+          FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
+        run: |
+          $env:PATH = "$env:FFMPEG_DIR;$env:PATH"
+          & .\tests\ffmpeg-smoke.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg smoke tests failed' }
+
+      - name: Run .NET video-engine integration tests
+        env:
+          SLIMCLIP_FFMPEG_DIR: ${{ steps.ffmpeg.outputs.bin_dir }}
+        run: |
+          dotnet run --project tests/SlimClip.Tests.csproj --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'Video-engine integration tests failed' }
+
+      - name: Install pinned Inno Setup compiler on disposable runner
+        run: |
+          choco install innosetup --version=6.6.1 --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 6.6.1 installation failed' }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'Inno Setup ISCC.exe not found after install' }
+
+      - name: Build FFmpeg-free classic-menu EXE installer
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path -LiteralPath $vswhere)) { throw 'VS toolchain unavailable on runner' }
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw 'No x64 C++ toolchain on runner' }
+          $developerCmd = Join-Path $installation 'Common7\Tools\VsDevCmd.bat'
+          if (-not (Test-Path -LiteralPath $developerCmd)) { throw 'VsDevCmd.bat unavailable' }
+          $build = Join-Path $env:GITHUB_WORKSPACE 'packaging\build-exe.ps1'
+          $version = '1.0.' + $env:GITHUB_RUN_NUMBER
+          $command = 'call "{0}" -arch=x64 -host_arch=x64 && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{1}" -Version "{2}"' -f $developerCmd, $build, $version
+          $log = Join-Path $env:RUNNER_TEMP 'SlimClip-exe-build.log'
+          & cmd.exe /d /s /c ($command + ' 1> "' + $log + '" 2>&1')
+          $exit = $LASTEXITCODE
+          if (-not (Test-Path -LiteralPath $log)) { throw "Build command created no log; exit code: $exit" }
+          $tail = @(Get-Content -LiteralPath $log -Tail 80)
+          $tail | ForEach-Object { Write-Host $_ }
+          if ($exit -ne 0) {
+            foreach ($line in @($tail | Select-Object -Last 15)) {
+              if (-not $line.Trim()) { continue }
+              $safe = $line -replace '[%\r\n]', ' '
+              Write-Host ('::error::' + $safe.Substring(0, [Math]::Min(400, $safe.Length)))
+            }
+            throw 'EXE installer build failed; see final build-line annotations.'
+          }
+
+      # No certificates or administrator trust changes. An actual Windows 11
+      # File Explorer visual test must still be done on a Windows 11 client PC.
+      - name: Install and uninstall classic-menu EXE on disposable runner
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            & .\tests\exe-install-smoke.ps1 -InstallerPath (Join-Path $env:GITHUB_WORKSPACE 'artifacts\SlimClip-Setup.exe')
+          } catch {
+            $detail = ($_ | Out-String) -replace '[%\r\n]', ' '
+            Write-Host ('::error::EXE install/uninstall: ' + $detail.Substring(0, [Math]::Min(800, $detail.Length)))
+            throw
+          }
+
+      - name: Upload FFmpeg-free unsigned EXE installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimClip-EXE-Installer-NO-FFMPEG
+          path: artifacts/SlimClip-Setup.exe
+          if-no-files-found: error
+          retention-days: 7

@@ -15,6 +15,8 @@ internal sealed class Settings
 {
     public SaveMode SaveMode { get; set; } = SaveMode.Copy;
     public bool SkipLargerResult { get; set; } = true;
+    // Empty selects the user-local, explicitly downloaded tools. Never resolve through PATH.
+    public string? FfmpegDirectory { get; set; }
     public Dictionary<string, Preset> Presets { get; set; } = new()
     {
         ["low"] = new() { Crf = 33, MaxHeight = 720 },

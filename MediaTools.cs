@@ -13,9 +13,22 @@ internal static class MediaTools
 {
     internal static string Executable(string tool)
     {
-        string bundled = Path.Combine(AppContext.BaseDirectory, tool + ".exe");
-        if (!File.Exists(bundled)) throw new IOException($"安装不完整：缺少 {tool}.exe。请重新安装 SlimClip。");
-        return bundled;
+        if (tool is not ("ffmpeg" or "ffprobe")) throw new ArgumentException("未知媒体工具。", nameof(tool));
+        string? selected = Settings.Load().FfmpegDirectory;
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            if (!FfmpegSetup.HasTools(selected))
+                throw new IOException("设置的 FFmpeg 目录缺少 ffmpeg.exe 或 ffprobe.exe；请在设置中重新选择目录。");
+            return Path.Combine(selected, tool + ".exe");
+        }
+        if (FfmpegSetup.HasTools(FfmpegSetup.ToolsDirectory))
+            return Path.Combine(FfmpegSetup.ToolsDirectory, tool + ".exe");
+        // The standalone integration-test executable stages its own tools in its output folder.
+        // Never search the application directory in a public SlimClip installation or use PATH.
+        if (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "SlimClip.Tests" &&
+            FfmpegSetup.HasTools(AppContext.BaseDirectory))
+            return Path.Combine(AppContext.BaseDirectory, tool + ".exe");
+        throw new IOException("尚未配置 FFmpeg。请在首次任务中同意下载，或在设置中指定已有 FFmpeg 目录。");
     }
 
     internal static Process Start(string tool, IEnumerable<string> arguments)
@@ -27,8 +40,8 @@ internal static class MediaTools
         };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
         try { return Process.Start(psi) ?? throw new IOException($"无法启动 {tool}。"); }
-        catch (System.ComponentModel.Win32Exception ex)
-        { throw new IOException($"无法启动已安装的 {tool}.exe，请重新安装 SlimClip。", ex); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
+        { throw new IOException($"无法启动 {tool}.exe：{ex.Message}。请在设置中检查 FFmpeg 目录或重新下载。", ex); }
     }
 
     internal static CancellationTokenRegistration KillOnCancel(Process process, CancellationToken cancellation) =>

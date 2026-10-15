@@ -1,21 +1,16 @@
-# FFmpeg 对应源码审计（公开 MSIX 分发前必须完成）
+# FFmpeg 对应源码审计（未来项目捆绑二进制之前）
 
-当前状态：**未完成；不要在公开仓库上传含本构建 FFmpeg/ffprobe 的 MSIX**。这份清单不构成法律意见或合规证明。SlimClip 自有源码使用 [MIT](../LICENSE)；独立运行的 FFmpeg 二进制按其自身条款处理。
+**新版公开 EXE 不含 FFmpeg/ffprobe；用户知情同意后自己的电脑从上游直接下载，或指定已有工具目录。** 这份清单是旧版私有 MSIX 分发测试留下的待办，只有未来由 SlimClip 项目**自行公开捆绑分发**这些第三方二进制时才需先按其条款完成；它不构成法律意见或合规证明。SlimClip 自有代码采用 [MIT](../LICENSE)，第三方 FFmpeg 并非 MIT。
 
-## 被审计的成品
+## 被审计的旧二进制
 
-- [Gyan FFmpeg 8.1.2 essentials ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)
-- ZIP SHA-256：`db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，以[上游校验值](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)和 CI 核对；包括 `ffmpeg.exe` 与 `ffprobe.exe`。
-- [Gyan 构建说明](https://www.gyan.dev/ffmpeg/builds/)称所有构建均为 GPLv3 静态构建，essentials 包含 x265、x264 等外部库。现行 CI 会将发行版许可证和 README 放进 MSIX，但这**不是**完整对应源码。
-- [FFmpeg 官方许可说明](https://ffmpeg.org/legal.html)建议分发方核对与二进制精确对应的源码、配置和所链接外部库，而不只是提供 FFmpeg 项目首页。
+- [Gyan FFmpeg 8.1.2 essentials ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)，[上游 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256) 为 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，包括 ffmpeg.exe/ffprobe.exe。[Gyan 构建说明](https://www.gyan.dev/ffmpeg/builds/)称其是 GPLv3 静态构建，可能链接 x265、x264 等外部库。
+- 历史私有 MSIX 曾在 CI 内生成且可上传到**私有 Actions 产物**；从私有改 public 前必须删除全部这种含 FFmpeg 的旧产物。当前分支已取消其构建/上传；Git 历史保留构建方案并不等于当前 EXE 分发了二进制。
 
-## 尚缺的可验证材料
+## 未来如果恢复捆绑分发，须先核实
 
-1. 与指定 ZIP 精确对应的 FFmpeg 源码版本、所有本地改动/补丁及配置参数。[上游 8.1.2 源码](https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz)只是候选，尚未核实能对应 Gyan 成品。
-2. `ffmpeg.exe`、`ffprobe.exe` 实际静态链接库的**准确版本**、源码归档及修改/补丁（尤其是 x265、x264 及其依赖）；发行版 README 提供线索，但未经逐项核对。
-3. 产生、安装这些二进制所需的构建脚本、配置、必要工具说明以及全部适用许可证文本；需将源码归档与二进制版本、SHA-256 建立可追溯关系。
-4. 公开 MSIX 下载位置旁提供**免费、等效、持续可用**的完整对应源码下载方式（见 [GPLv3 第 6 节](https://www.gnu.org/licenses/gpl-3.0.en.html)）；对发布后的可用性进行实际下载验证。短期 Actions artifact 不能代替持久发行源。
+1. 与该 ZIP 精确对应的 FFmpeg 源码版本、所有补丁/本地修改及编译配置。[FFmpeg 8.1.2 主源码](https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz)只是一部分候选，不能单独证明对应性。
+2. `ffmpeg.exe`、`ffprobe.exe` 实际静态依赖的准确版本、源码、补丁、适用的许可证和必要构建脚本（如 x265/x264），建立与发布二进制/哈希可追溯的记录。
+3. 按[FFmpeg 官方许可说明](https://ffmpeg.org/legal.html)与[GPLv3 第 6 节](https://www.gnu.org/licenses/gpl-3.0.en.html)提供符合所选分发方式的完整对应源码获取路径并核验持续可用性；短期 GitHub Actions artifact 不应冒充持久源码提供方式。
 
-## 下一步
-
-优先向 Gyan 构建维护者询问该 ZIP 的完整对应源码、各静态依赖的版本/补丁及构建脚本；其[构建页](https://www.gyan.dev/ffmpeg/builds/)列有公开讨论与联系途径。如果无法取得并核实，则改用自己从固定源码构建、同时归档并发布全部必要对应源码/脚本的 FFmpeg，或重新设计为不分发 FFmpeg 二进制（后者需修改 `MediaTools.cs` 和完整离线 MSIX 的既定方案）。**不要凭一个主项目 Git 标签或一份 LICENSE 将上述条目标为完成。**
+若不能取得并核实这些资料，继续使用**不捆绑 FFmpeg 的 EXE + 用户从上游直接获取**，不要仅凭一份 LICENSE 或 FFmpeg 项目主页推断旧静态构建的依赖源码已完备。

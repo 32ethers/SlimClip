@@ -6,10 +6,4 @@
       <requestedExecutionLevel level="asInvoker" uiAccess="false" />
     </requestedPrivileges></security>
   </trustInfo>
-  <!-- Keep these three fields identical to AppxManifest Identity/Applications.
-       Publisher must also equal the MSIX signing certificate Subject. -->
-  <msix xmlns="urn:schemas-microsoft-com:msix.v1"
-        publisher="CN=SlimClip Development"
-        packageName="SlimClip.Menu"
-        applicationId="SlimClip" />
 </assembly>

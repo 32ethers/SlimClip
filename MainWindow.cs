@@ -169,6 +169,25 @@ internal sealed class MainWindow : Window
                 try
                 {
                     var settings = Settings.Load();
+                    if (string.IsNullOrWhiteSpace(settings.FfmpegDirectory) && !FfmpegSetup.HasTools(FfmpegSetup.ToolsDirectory))
+                    {
+                        ShowWindow();
+                        var consent = MessageBox.Show(this,
+                            "SlimClip 安装包不包含 FFmpeg。视频处理需要第三方 Gyan FFmpeg（GPLv3，与 SlimClip 的 MIT 许可不同）。\n\n" +
+                            "是否现在从 Gyan 官方 HTTPS 地址直接下载到这台电脑？\n" + FfmpegSetup.DownloadUrl +
+                            "\n\n下载后将核对固定 SHA-256，并仅安装 ffmpeg.exe / ffprobe.exe 到当前用户的 %LOCALAPPDATA%\\SlimClip\\tools。" +
+                            "不同意或下载失败不会改动源视频。也可以在设置中选择已有 FFmpeg 目录。",
+                            "首次使用：授权下载 FFmpeg", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                        if (consent != MessageBoxResult.Yes)
+                        {
+                            job.State = "未授权下载 FFmpeg；原视频未改动。可在设置中指定已有工具目录。";
+                            job.IsIndeterminate = false;
+                            continue;
+                        }
+                        var setupProgress = new Progress<string>(text => { job.State = text; _message.Text = text; });
+                        await FfmpegSetup.InstallAsync(setupProgress, _current.Token);
+                    }
+                    _current.Token.ThrowIfCancellationRequested();
                     if (job.Level == "estimate")
                     {
                         var results = await Estimator.RunAsync(job.File, settings, (stage, value) =>
