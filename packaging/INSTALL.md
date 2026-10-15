@@ -1,6 +1,6 @@
 # SlimClip EXE 安装、卸载与第三方 FFmpeg
 
-> **状态：[Windows CI 第十四轮](https://github.com/32ethers/SlimClip/actions/runs/38718474279)已通过 14 项引擎/双语/PATH/ETA 测试、首次向上游下载、哈希验证、工具提取与启动、双语 EXE 构建、COM 自测、按两种语言参数每用户安装／经典注册核对／卸载及 FFmpeg-free 安装器上传；真实 Windows 11 Explorer 菜单和首次授权 UI 尚待实机验收。** `packaging/build-exe.ps1` 构建自包含 .NET 8 程序、原生经典菜单 DLL 和 Inno Setup 安装器；不包含 FFmpeg、不使用 MSIX，也不会生成、导入或信任测试证书。
+> **状态：[Windows CI 第十四轮](https://github.com/32ethers/SlimClip/actions/runs/38718474279)已通过 14 项引擎/双语/PATH/ETA 测试、首次向上游下载、哈希验证、工具提取与启动、双语 EXE 构建、COM 自测、按两种语言参数每用户安装／经典注册核对／卸载及 FFmpeg-free 安装器上传；随后用户反馈 `v1.1.0-preview.1` 整体实机验收通过；这与 CI 自动检查是不同来源的结果。** `packaging/build-exe.ps1` 构建自包含 .NET 8 程序、原生经典菜单 DLL 和 Inno Setup 安装器；不包含 FFmpeg、不使用 MSIX，也不会生成、导入或信任测试证书。
 
 ## 安装（预览版）
 

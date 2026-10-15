@@ -6,7 +6,7 @@
 
 手机、相机或录屏生成的视频太大，上传、分享和存放都不方便；为了压缩它们，又不想研究 FFmpeg 命令行，或冒险覆盖原片。SlimClip 把常用操作做成三个画质档位：选视频、选档位，等待生成 H.265/MP4 文件。它可以先预估大小、批量排队，并在处理时显示进度和大致剩余时间。
 
-适用 **Windows 10/11 x64**。Windows 11 的入口在右键菜单的 **「显示更多选项」** 里，而不是第一层新式菜单。程序和安装包目前是**未签名预览版**；Windows 11 菜单外观、授权弹窗和音画同步仍待实机验收。
+适用 **Windows 10/11 x64**。Windows 11 的入口在右键菜单的 **「显示更多选项」** 里，而不是第一层新式菜单。程序和安装包目前是**未签名预览版**；Windows 11 实机验收已获用户反馈通过。
 
 ## 下载和安装
 
@@ -34,11 +34,11 @@
 ## 使用前要知道
 
 - 音频会随视频保留：AAC 音轨直接复制，其他音轨转换为 AAC；尽量保留多音轨和语言标签。**字幕等额外轨道目前不能保留**：另存前会提示，替换原片时则拒绝这样做。重要视频请先用副本试用并检查播放效果。
-- 预览版虽通过 [Windows CI：14 项测试、安装与卸载检查](https://github.com/32ethers/SlimClip/actions/runs/38724166612)，但自动测试**不能代替** Windows 11 上的真实菜单显示、授权操作、队列/托盘体验和音画同步验收。请参考[实机验收清单](tests/windows11-acceptance.md)。
+- 预览版通过了 [Windows CI：14 项测试、安装与卸载检查](https://github.com/32ethers/SlimClip/actions/runs/38724166612)；用户另反馈 Windows 11 实机验收通过。自动测试与实机体验是两类不同的验证，复测步骤见[实机验收清单](tests/windows11-acceptance.md)。
 - 安装包不附带 FFmpeg。SlimClip 自有代码采用 [MIT](LICENSE)；可选择下载的第三方 Gyan FFmpeg 构建采用 GPLv3，自己提供的版本则按其实际许可使用。详见[安装、卸载与工具说明](packaging/INSTALL.md)。
 
 ## English
 
 **SlimClip compresses videos from the Windows 10/11 Explorer context menu** without requiring FFmpeg commands. It is an **unsigned preview**. Download `SlimClip-Setup.exe` from the [release](https://github.com/32ethers/SlimClip/releases/tag/v1.1.0-preview.1), install it for your user account, then right-click a video. On Windows 11 choose **Show more options → Compress Video**; on Windows 10 use the classic context menu. Choose **Low** (smaller), **Medium** (balanced), **High** (quality), or **Estimate size** for a single file. The default saves a new H.265/MP4 file beside the original; selecting several videos queues them.
 
-The installer contains **no FFmpeg**. SlimClip can use an existing folder or a complete `ffmpeg.exe`/`ffprobe.exe` pair on `PATH`; otherwise it asks before downloading a pinned build directly from upstream. Use **Settings → Language** to choose English or Simplified Chinese, then fully quit and restart. See the [installation guide](packaging/INSTALL.md) and [manual acceptance checklist](tests/windows11-acceptance.md). Actual Windows 11 appearance and audio/video sync still need hands-on testing.
+The installer contains **no FFmpeg**. SlimClip can use an existing folder or a complete `ffmpeg.exe`/`ffprobe.exe` pair on `PATH`; otherwise it asks before downloading a pinned build directly from upstream. Use **Settings → Language** to choose English or Simplified Chinese, then fully quit and restart. See the [installation guide](packaging/INSTALL.md) and [manual acceptance checklist](tests/windows11-acceptance.md). The user reports that Windows 11 hands-on acceptance passed; the installer remains unsigned.
