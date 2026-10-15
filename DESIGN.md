@@ -13,9 +13,9 @@
 
 1. WPF/.NET 8 主程序自包含 win-x64；Inno Setup 编译 per-user 安装 EXE，在 HKCU 下注册经典菜单 COM 及软件卸载项，不要求管理员权限、MSIX 身份或安装自签证书。**未签名 EXE 仍可能触发 SmartScreen 警告；不能声称 Windows 完全无安全提示。** 卸载仅移除自己安装的程序文件、快捷方式与菜单注册，保留用户视频、结果、设置及已下载工具。
 2. **安装 EXE 与源码仓库均不附带 FFmpeg/ffprobe 二进制。** 首次压缩/预估前告知 Gyan FFmpeg 来源与 GPLv3 许可并明确征得用户同意，由用户机器从 [Gyan 官方版本 ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)通过 HTTPS 下载，核对固定 SHA-256 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，只提取所需程序到当前用户 `%LOCALAPPDATA%\SlimClip\tools`。用户也可在设置中指定已有 ffmpeg.exe/ffprobe.exe 的绝对目录；拒绝、离线、校验失败均不得处理源片。不从 PATH 随意寻找二进制。
-3. SlimClip 自有代码为 MIT；用户从上游直接获取的 FFmpeg 是独立 GPLv3 软件，不可误称其为 MIT 或完全不必关注许可。当前安装包没有分发 FFmpeg 二进制，因此不产生由该安装包分发 GPL 二进制引起的相应再分发义务；首次使用仍须告知来源与许可。未来若**由 SlimClip 项目自行捆绑分发** FFmpeg 二进制，须先完成[对应源码与许可审计](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已重新公开；旧私有 MSIX 测试产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，但无法撤回此前可能被下载的副本；删除时的产物列表状态不代表此后上传的 FFmpeg-free EXE 产物状态。
+3. SlimClip 自有代码为 MIT；程序提供下载的 Gyan FFmpeg 构建是独立 GPLv3 软件，用户自备版本则以其实际构建许可为准，不可误称为 SlimClip 的 MIT 代码或完全不必关注许可。当前安装包没有分发 FFmpeg 二进制，因此不产生由该安装包分发 GPL 二进制引起的相应再分发义务；首次使用仍须告知来源与许可。未来若**由 SlimClip 项目自行捆绑分发** FFmpeg 二进制，须先完成[对应源码与许可审计](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已重新公开；旧私有 MSIX 测试产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，但无法撤回此前可能被下载的副本；删除时的产物列表状态不代表此后上传的 FFmpeg-free EXE 产物状态。
 4. GitHub Actions 在 Windows runner 下载 FFmpeg **仅用于测试**（不上传），运行烟测和引擎测试，构建不含 FFmpeg 的 EXE，静态检查原生菜单后在一次性 runner 上安装/核对经典注册/卸载；Windows 11 Explorer 视觉效果、双击安装与真实音画同步仍需手工验收。验收清单见[Windows 11 测试](tests/windows11-acceptance.md)。
 
 ## 验收状态
 
-[新版 CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)已通过 11 项实际引擎集成测试、FFmpeg 烟测、程序实际向上游下载并验证 SHA-256/解压启动 ffprobe、原生 COM 子菜单自测、不含 FFmpeg 的 EXE 构建，以及一次性 Windows runner 上每用户安装、HKCU 经典菜单注册检查与卸载清理。**这些自动化测试不证明 Windows 11「显示更多选项」中的视觉呈现、首次授权弹窗、双击安装、多选托盘交互或人工音画同步。** 未完成实机右键菜单、音画同步、异常恢复和升级卸载之前，不标记首版全部通过。
+[新版 CI 第十二轮](https://github.com/32ethers/SlimClip/actions/runs/38705954148)已通过 12 项测试（包括视频引擎和预计剩余时间边界/慢探测模拟）、FFmpeg 烟测、程序实际向上游下载并验证 SHA-256/解压启动 ffprobe、原生 COM 子菜单自测、不含 FFmpeg 的 EXE 构建，以及一次性 Windows runner 上每用户安装、HKCU 经典菜单注册检查与卸载清理。**这些自动化测试不证明 Windows 11「显示更多选项」中的视觉呈现、首次授权弹窗、双击安装、多选托盘交互或人工音画同步。** 未完成实机右键菜单、音画同步、异常恢复和升级卸载之前，不标记首版全部通过。

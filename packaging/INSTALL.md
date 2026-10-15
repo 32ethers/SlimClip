@@ -1,6 +1,6 @@
 # SlimClip EXE 安装、卸载与第三方 FFmpeg
 
-> **状态：[新版 Windows CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)已通过首次向上游下载、哈希验证、工具提取与启动、EXE 构建、COM 自测、每用户安装／经典注册核对／卸载及 FFmpeg-free 安装器上传；真实 Windows 11 Explorer 菜单和首次授权 UI 尚待实机验收。** `packaging/build-exe.ps1` 构建自包含 .NET 8 程序、原生经典菜单 DLL 和 Inno Setup 安装器；不包含 FFmpeg、不使用 MSIX，也不会生成、导入或信任测试证书。
+> **状态：[新版 Windows CI 第十二轮](https://github.com/32ethers/SlimClip/actions/runs/38705954148)已通过预计剩余时间用例、首次向上游下载、哈希验证、工具提取与启动、EXE 构建、COM 自测、每用户安装／经典注册核对／卸载及 FFmpeg-free 安装器上传；真实 Windows 11 Explorer 菜单和首次授权 UI 尚待实机验收。** `packaging/build-exe.ps1` 构建自包含 .NET 8 程序、原生经典菜单 DLL 和 Inno Setup 安装器；不包含 FFmpeg、不使用 MSIX，也不会生成、导入或信任测试证书。
 
 ## 安装（开发测试与未来发布）
 
@@ -15,6 +15,6 @@
 
 ## GitHub Actions 与重新公开
 
-CI 的 FFmpeg 仅作为隔离 runner 的测试输入：从固定的 [Gyan ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)下载、验证 [SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)，运行音轨/引擎测试；随后**只上传不含 FFmpeg 的 EXE 安装器**。构建脚本拒绝将名为 `ffmpeg.exe`、`ffprobe.exe` 的文件放进安装载荷，隔离安装测试再次检查。SlimClip 自有代码采用 [MIT](../LICENSE)，上游 FFmpeg 是独立 GPLv3 软件，仍应告知来源及许可，不能将其视为 MIT 或完全不必考虑其许可。当前安装包没有分发 FFmpeg 二进制，因此不产生由该安装包分发 GPL 二进制引起的相应再分发义务；若未来决定自行捆绑上游二进制，先完成[对应源码与许可审计](FFMPEG-SOURCE-AUDIT.md)。Inno Setup 安装引擎来自[其官方项目](https://jrsoftware.org/)，其[许可](https://jrsoftware.org/files/is/license.txt)允许用于软件分发。仓库已重新变为 public，CI 状态与步骤结果现在可以通过公开 Actions API 查看；私有期设计的 `ci-diagnostics` 分支未产生，目前不需要上传额外报告。若将来再次转 private，诊断任务只记录步骤状态与限定错误编号，不能把任意构建日志或 FFmpeg 二进制写进 Git 历史。
+CI 的 FFmpeg 仅作为隔离 runner 的测试输入：从固定的 [Gyan ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)下载、验证 [SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256)，运行音轨/引擎测试；随后**只上传不含 FFmpeg 的 EXE 安装器**。构建脚本拒绝将名为 `ffmpeg.exe`、`ffprobe.exe` 的文件放进安装载荷，隔离安装测试再次检查。SlimClip 自有代码采用 [MIT](../LICENSE)，程序提供下载的 Gyan FFmpeg 构建是独立的 GPLv3 软件（用户自行选择的其他构建以其实际许可为准），仍应告知来源及许可，不能将第三方工具视为 SlimClip 的 MIT 代码。当前安装包没有分发 FFmpeg 二进制，因此不产生由该安装包分发 GPL 二进制引起的相应再分发义务；若未来决定自行捆绑上游二进制，先完成[对应源码与许可审计](FFMPEG-SOURCE-AUDIT.md)。Inno Setup 安装引擎来自[其官方项目](https://jrsoftware.org/)，其[许可](https://jrsoftware.org/files/is/license.txt)允许用于软件分发。仓库已重新变为 public，CI 状态与步骤结果现在可以通过公开 Actions API 查看；私有期设计的 `ci-diagnostics` 分支未产生，目前不需要上传额外报告。若将来再次转 private，诊断任务只记录步骤状态与限定错误编号，不能把任意构建日志或 FFmpeg 二进制写进 Git 历史。
 
 仓库变为 public 后发现一个未过期的旧测试产物 `SlimClip-PRIVATE-TEST-SIGNED-TRUST-CERT-FIRST`（ID `11945350355`），曾短暂公开；通过[只针对该产物的清理 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)核对原运行、名称、大小后删除。删除后的公开 API 查询该 ID 返回 404、当时的产物列表为 0；这不代表之后上传的 FFmpeg-free EXE 产物列表仍为空。**无法证明无人在公开期间下载，也无法撤回外部副本。**一次性清理工作流已不在当前主分支；新版公开 EXE 不捆绑 FFmpeg，不能用旧 MSIX 的测试成绩冒充 EXE 实机验收。

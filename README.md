@@ -18,10 +18,10 @@ Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.
 
 ## 测试状态
 
-[Windows CI 已通过的运行](https://github.com/32ethers/SlimClip/actions/runs/38701051235)覆盖引擎测试、FFmpeg 下载校验、COM 自测及 EXE 安装／注册／卸载检查。**Windows 11「显示更多选项」中的实际菜单、首次授权界面、多选/托盘交互及音画同步尚未获人工实机确认**；CI 注册检查不等于视觉验收。测试步骤见[安装说明](packaging/INSTALL.md)。
+[Windows CI 第十二轮](https://github.com/32ethers/SlimClip/actions/runs/38705954148)已通过 12 项测试（含剩余时间边界及慢探测模拟）、FFmpeg 下载校验、COM 自测与不含 FFmpeg 的 EXE 安装／注册／卸载检查。**Windows 11「显示更多选项」中的实际菜单、首次授权界面、多选/托盘交互及音画同步尚未获人工实机确认**；CI 注册检查不等于视觉验收。测试步骤见[安装说明](packaging/INSTALL.md)。
 
 ## 许可与公开仓库
 
-SlimClip 自有代码采用 [MIT 许可证](LICENSE)（© 2026 32ethers）；FFmpeg 是独立的 GPLv3 软件，**并非 MIT 或无需关注其许可**。当前安装包不再分发 FFmpeg 二进制，因此没有因该安装包分发 GPL 二进制而产生的相应再分发义务；首次使用仍告知来源与许可。未来如自行捆绑分发，须先核查[对应源码和许可义务](packaging/FFMPEG-SOURCE-AUDIT.md)。旧版含 FFmpeg 的 MSIX 测试产物曾短暂公开，已[删除](https://github.com/32ethers/SlimClip/actions/runs/38697950751)，但无法撤回此前可能被下载的副本。
+SlimClip 自有代码采用 [MIT 许可证](LICENSE)（© 2026 32ethers）；程序提供下载的 Gyan FFmpeg 构建是独立的 GPLv3 软件，用户自行指定的其他构建则以其实际许可为准，**不能把 FFmpeg 误称为 MIT 或无需关注其许可**。当前安装包不再分发 FFmpeg 二进制，因此没有因该安装包分发 GPL 二进制而产生的相应再分发义务；首次使用仍告知来源与许可。未来如自行捆绑分发，须先核查[对应源码和许可义务](packaging/FFMPEG-SOURCE-AUDIT.md)。旧版含 FFmpeg 的 MSIX 测试产物曾短暂公开，已[删除](https://github.com/32ethers/SlimClip/actions/runs/38697950751)，但无法撤回此前可能被下载的副本。
 
 经典菜单设计依据：[微软创建快捷菜单处理程序](https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers)。
