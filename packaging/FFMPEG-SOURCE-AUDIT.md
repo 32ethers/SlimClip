@@ -1,11 +1,11 @@
 # FFmpeg 对应源码审计（未来项目捆绑二进制之前）
 
-**新版公开 EXE 不含 FFmpeg/ffprobe；用户知情同意后自己的电脑从上游直接下载，或指定已有工具目录。** 这份清单是旧版私有 MSIX 分发测试留下的待办，只有未来由 SlimClip 项目**自行公开捆绑分发**这些第三方二进制时才需先按其条款完成；它不构成法律意见或合规证明。SlimClip 自有代码采用 [MIT](../LICENSE)，第三方 FFmpeg 并非 MIT。
+**当前安装 EXE 与源码仓库均不附带 FFmpeg/ffprobe；首次使用告知上游来源及 GPLv3 许可，用户明确同意后由自己的电脑从固定上游地址直接下载并校验，或指定已有工具目录。** 当前安装包没有分发 GPL FFmpeg 二进制，不产生由该安装包分发该二进制引起的相应再分发义务；这不意味着 FFmpeg 的 GPLv3 许可完全不必关注。以下清单源于旧版私有 MSIX 测试，仅在未来由 SlimClip 项目**自行捆绑分发**这些第三方二进制时作为事先核查项目；它不构成法律意见或合规证明。SlimClip 自有代码采用 [MIT](../LICENSE)，第三方 FFmpeg 并非 MIT。
 
 ## 被审计的旧二进制
 
 - [Gyan FFmpeg 8.1.2 essentials ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)，[上游 SHA-256](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip.sha256) 为 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，包括 ffmpeg.exe/ffprobe.exe。[Gyan 构建说明](https://www.gyan.dev/ffmpeg/builds/)称其是 GPLv3 静态构建，可能链接 x265、x264 等外部库。
-- 历史私有 MSIX 曾在 CI 内生成并上传到**私有 Actions 产物**；仓库转 public 时该旧产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，公开产物列表目前为 0。不能撤回之前可能被下载的副本；当前分支已取消旧 MSIX 构建/上传，Git 历史保留构建方案并不等于当前 EXE 分发了二进制。
+- 历史私有 MSIX 曾在 CI 内生成并上传到**私有 Actions 产物**；仓库转 public 时该旧产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，删除时公开产物列表为 0；之后的新 FFmpeg-free EXE 产物不在该旧产物中。不能撤回之前可能被下载的副本；当前分支已取消旧 MSIX 构建/上传，Git 历史保留构建方案并不等于当前 EXE 分发了二进制。
 
 ## 未来如果恢复捆绑分发，须先核实
 

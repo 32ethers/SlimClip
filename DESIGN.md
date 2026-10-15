@@ -4,7 +4,7 @@
 
 - **不再要求 Windows 11 第一层新式资源管理器菜单，也不再使用 MSIX。** 交付每用户 EXE 安装器；在 Windows 11 通过「显示更多选项」看到经典「压缩视频」子菜单（低、中、高、预估大小、设置）；Windows 10 可在传统右键菜单看到。原生 x64 `IExplorerCommand` COM DLL 只读取所选文件并启动桌面程序，耗时任务绝不在 Explorer 内运行。只对视频显示；多选视频时逐项入队，预估仅单文件可用。
 - **唯一输出格式：H.265 视频 + MP4 容器**。不提供保留原编码、AV1、H.264 或 MKV 输出。可读取 FFmpeg 能解码的输入；不保证每条素材缩小一半。低档 CRF 33 / 最高 720p，中档 CRF 28 / 最高 1080p，高档 CRF 23 / 原分辨率；保持比例、不放大小视频，CRF 和高度可在设置中调整。
-- 后台顺序处理压缩和预估，窗口显示队列、当前阶段、每项真实进度及错误。可取消当前任务；关窗口缩到托盘并继续工作，显式退出先提示会取消任务、丢弃待处理队列。
+- 后台顺序处理压缩和预估，窗口显示队列、当前阶段、每项真实进度、当前编码/预估的预计剩余时间及错误；排队、首次下载和无足够样本时不伪造倒计时。可取消当前任务；关窗口缩到托盘并继续工作，显式退出先提示会取消任务、丢弃待处理队列。
 - 预估逐档取中间最多 8 秒重新编码，不是根据源码率假定压缩比例。显示低/中/高的阶段及随编码更新的进度条、预计大小与原片大小；标注结果只是粗略估计，不写源文件，可取消。
 - 设置提供默认「同目录另存」和可选「成功后替换原片」。先写同目录临时文件，校验视频 HEVC、所有音轨 AAC、时长及非空；默认不保存大于等于原片的结果。另存同名时生成不覆盖的新文件名；异扩展名替换时同名 MP4 已存在则停止。替换使用备份/恢复日志，转换期间源片变化停止提交；用户视频和备份不被卸载器删除。
 - **音频安全**：保留全部音轨及顺序，AAC 直接复制，非 AAC 各自转换 AAC，保留语言标记；编码失败不保存结果，实机验收仍须试听音画同步。字幕与额外视频/数据轨首版不嵌入；另存必须明确同意省略，替换禁止省略这些轨道；章节、附件、封面不承诺保留。
@@ -12,8 +12,8 @@
 ## 无证书 EXE 交付与第三方工具
 
 1. WPF/.NET 8 主程序自包含 win-x64；Inno Setup 编译 per-user 安装 EXE，在 HKCU 下注册经典菜单 COM 及软件卸载项，不要求管理员权限、MSIX 身份或安装自签证书。**未签名 EXE 仍可能触发 SmartScreen 警告；不能声称 Windows 完全无安全提示。** 卸载仅移除自己安装的程序文件、快捷方式与菜单注册，保留用户视频、结果、设置及已下载工具。
-2. **公开安装 EXE 不包含 FFmpeg/ffprobe 二进制。** 首次压缩/预估前明确征得用户同意，由用户机器从 [Gyan 官方版本 ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)通过 HTTPS 下载，核对固定 SHA-256 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，只提取所需程序到当前用户 `%LOCALAPPDATA%\SlimClip\tools`。用户也可在设置中指定已有 ffmpeg.exe/ffprobe.exe 的绝对目录；拒绝、离线、校验失败均不得处理源片。不从 PATH 随意寻找二进制。
-3. SlimClip 自有源码为 MIT；用户直接从上游获取的 FFmpeg 是另一款 GPLv3 软件，不能误称为 MIT。任何未来**由 SlimClip 项目公开捆绑分发** FFmpeg 二进制的方案仍须先完成[对应源码审计](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已改回 public，旧私有 MSIX 测试产物曾短暂公开，但已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，公开 Actions 产物列表目前为 0；重设可见性与删除产物都无法收回此前可能被下载的副本。
+2. **安装 EXE 与源码仓库均不附带 FFmpeg/ffprobe 二进制。** 首次压缩/预估前告知 Gyan FFmpeg 来源与 GPLv3 许可并明确征得用户同意，由用户机器从 [Gyan 官方版本 ZIP](https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip)通过 HTTPS 下载，核对固定 SHA-256 `db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`，只提取所需程序到当前用户 `%LOCALAPPDATA%\SlimClip\tools`。用户也可在设置中指定已有 ffmpeg.exe/ffprobe.exe 的绝对目录；拒绝、离线、校验失败均不得处理源片。不从 PATH 随意寻找二进制。
+3. SlimClip 自有代码为 MIT；用户从上游直接获取的 FFmpeg 是独立 GPLv3 软件，不可误称其为 MIT 或完全不必关注许可。当前安装包没有分发 FFmpeg 二进制，因此不产生由该安装包分发 GPL 二进制引起的相应再分发义务；首次使用仍须告知来源与许可。未来若**由 SlimClip 项目自行捆绑分发** FFmpeg 二进制，须先完成[对应源码与许可审计](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已重新公开；旧私有 MSIX 测试产物曾短暂公开，已由[一次性 CI](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，但无法撤回此前可能被下载的副本；删除时的产物列表状态不代表此后上传的 FFmpeg-free EXE 产物状态。
 4. GitHub Actions 在 Windows runner 下载 FFmpeg **仅用于测试**（不上传），运行烟测和引擎测试，构建不含 FFmpeg 的 EXE，静态检查原生菜单后在一次性 runner 上安装/核对经典注册/卸载；Windows 11 Explorer 视觉效果、双击安装与真实音画同步仍需手工验收。验收清单见[Windows 11 测试](tests/windows11-acceptance.md)。
 
 ## 验收状态

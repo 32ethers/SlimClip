@@ -15,11 +15,13 @@ internal sealed class Job : INotifyPropertyChanged
     private string _state = "排队中";
     private double _progress;
     private bool _indeterminate;
+    private string _remaining = "排队中";
     public string File { get; init; } = "";
     public string Level { get; init; } = "";
     public string State { get => _state; set { _state = value; Changed(); } }
     public double Progress { get => _progress; set { _progress = value; Changed(); } }
     public bool IsIndeterminate { get => _indeterminate; set { _indeterminate = value; Changed(); } }
+    public string Remaining { get => _remaining; set { _remaining = value; Changed(); } }
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
@@ -67,7 +69,8 @@ internal sealed class MainWindow : Window
         progress.SetValue(FrameworkElement.HeightProperty, 17.0);
         progress.SetBinding(ProgressBar.ValueProperty, new Binding(nameof(Job.Progress)));
         progress.SetBinding(ProgressBar.IsIndeterminateProperty, new Binding(nameof(Job.IsIndeterminate)));
-        grid.Columns.Add(new DataGridTemplateColumn { Header = "进度", CellTemplate = new DataTemplate { VisualTree = progress }, Width = 140 });
+        grid.Columns.Add(new DataGridTemplateColumn { Header = "进度", CellTemplate = new DataTemplate { VisualTree = progress }, Width = 130 });
+        grid.Columns.Add(new DataGridTextColumn { Header = "预计剩余", Binding = new Binding(nameof(Job.Remaining)), Width = 130 });
         grid.Columns.Add(new DataGridTextColumn { Header = "状态 / 结果", Binding = new Binding(nameof(Job.State)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         root.Children.Add(grid);
         Loaded += (_, _) => WarnAboutBackups();
@@ -165,6 +168,7 @@ internal sealed class MainWindow : Window
                 _pending--;
                 _current = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
                 job.IsIndeterminate = true;
+                job.Remaining = "准备中";
                 job.State = job.Level == "estimate" ? "探测视频，准备评估…" : "探测视频，准备转换…";
                 try
                 {
@@ -182,6 +186,7 @@ internal sealed class MainWindow : Window
                         {
                             job.State = "未授权下载 FFmpeg；原视频未改动。可在设置中指定已有工具目录。";
                             job.IsIndeterminate = false;
+                            job.Remaining = "—";
                             continue;
                         }
                         var setupProgress = new Progress<string>(text => { job.State = text; _message.Text = text; });
@@ -190,16 +195,22 @@ internal sealed class MainWindow : Window
                     _current.Token.ThrowIfCancellationRequested();
                     if (job.Level == "estimate")
                     {
+                        var eta = new RemainingTime();
+                        job.Remaining = "计算中…";
                         var results = await Estimator.RunAsync(job.File, settings, (stage, value) =>
                         {
                             Dispatcher.VerifyAccess(); // WorkAsync and its awaits run on the UI dispatcher.
                             job.State = stage;
                             job.IsIndeterminate = value is null;
-                            if (value is not null) job.Progress = value.Value * 100;
+                            if (value is not null)
+                            {
+                                job.Progress = value.Value * 100;
+                                job.Remaining = eta.Update(value.Value);
+                            }
                         }, _current.Token);
                         var labels = new Dictionary<string, string> { ["low"] = "低", ["medium"] = "中", ["high"] = "高" };
                         string detail = string.Join("\n", results.Select(x => $"{labels[x.Level]}：约 {x.Bytes / 1048576.0:F1} MiB"));
-                        job.IsIndeterminate = false; job.Progress = 100;
+                        job.IsIndeterminate = false; job.Progress = 100; job.Remaining = "已完成";
                         job.State = detail.Replace('\n', ' ');
                         _message.Text = "预估已完成：" + Path.GetFileName(job.File);
                         ShowWindow(); // A dialog owned by a hidden tray window may be invisible.
@@ -215,22 +226,26 @@ internal sealed class MainWindow : Window
                             var choice = MessageBox.Show(this,
                                 $"{Path.GetFileName(job.File)} 包含 {source.SubtitleCount} 条字幕和 {source.AncillaryCount} 条额外视频/数据轨。首版输出只保留主视频与全部音轨；原文件将保留。是否继续另存？",
                                 "轨道提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                            if (choice != MessageBoxResult.Yes) { job.State = "用户取消：输出会省略额外轨道"; continue; }
+                            if (choice != MessageBoxResult.Yes) { job.State = "用户取消：输出会省略额外轨道"; job.IsIndeterminate = false; job.Remaining = "—"; continue; }
                             allowOmission = true;
                         }
+                        var eta = new RemainingTime();
+                        job.Remaining = "计算中…";
                         job.State = "转换中";
                         var result = await Compression.RunAsync(new CompressionRequest(job.File, job.Level),
                             settings.Presets[job.Level], settings, allowOmission, value =>
                             {
                                 Dispatcher.VerifyAccess();
                                 job.IsIndeterminate = false; job.Progress = value * 100;
+                                job.Remaining = eta.Update(value);
                             }, _current.Token);
                         job.State = result.Message;
                         job.IsIndeterminate = false;
+                        job.Remaining = result.Success ? "已完成" : "已结束";
                     }
                 }
-                catch (OperationCanceledException) { job.State = "已取消"; job.IsIndeterminate = false; }
-                catch (Exception ex) { job.State = "失败：" + ex.Message; job.IsIndeterminate = false; }
+                catch (OperationCanceledException) { job.State = "已取消"; job.IsIndeterminate = false; job.Remaining = "—"; }
+                catch (Exception ex) { job.State = "失败：" + ex.Message; job.IsIndeterminate = false; job.Remaining = "—"; }
                 finally { _current.Dispose(); _current = null; }
             }
         }

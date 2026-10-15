@@ -38,9 +38,10 @@ internal static class Program
             await Run("Subtitle requires consent and forbids replacement", SubtitleAsync);
             await Run("Extra video track requires consent and forbids replacement", ExtraVideoAsync);
             await Run("Estimator returns three levels and progress", EstimateAsync);
+            await Run("Remaining time handles early, final and invalid progress", RemainingTimeAsync);
             await Run("Cancellation never commits or changes the source", CancellationAsync);
             await Run("Larger result is skipped without touching source", SkipLargerAsync);
-            Console.WriteLine($"Result: {11 - _failures}/11 passed, {_failures} failed.");
+            Console.WriteLine($"Result: {12 - _failures}/12 passed, {_failures} failed.");
             return _failures == 0 ? 0 : 1;
         }
         catch (Exception error)
@@ -281,6 +282,30 @@ internal static class Program
             _ => { }, CancellationToken.None);
         Check(result.Success && (await MediaTools.ProbeAsync(Path.Combine(folder, "extra_slimclip_low.mp4"),
             CancellationToken.None)).AncillaryCount == 0, "Extra video track was not omitted by consent.");
+    }
+
+    private static Task RemainingTimeAsync()
+    {
+        Check(RemainingTime.Format(0, 30) == "计算中…", "No estimate before encoding progress.");
+        Check(RemainingTime.Format(0.2, 2) == "计算中…", "Do not show unstable early ETA.");
+        Check(RemainingTime.Format(0.04, 30) == "计算中…", "Do not extrapolate from too little progress.");
+        Check(RemainingTime.Format(0.25, 20) == "约 1 分", "Remaining minutes calculation is wrong.");
+        Check(RemainingTime.Format(0.5, 3660) == "约 1 小时 1 分", "Long encode ETA is wrong.");
+        Check(RemainingTime.Format(0.5, 90000) == "约 1 天 1 小时", "Day-scale ETA is wrong.");
+        Check(RemainingTime.Format(0.99, 60) == "收尾中…", "Encoding finalization must not promise an ETA.");
+        Check(RemainingTime.Format(1, 60) == "已完成", "Completed task still displays ETA.");
+        Check(RemainingTime.Format(double.NaN, 60) == "计算中…", "Non-finite progress must not display an ETA.");
+        Check(RemainingTime.Format(0.1, double.PositiveInfinity) == "计算中…", "Invalid elapsed time must not display an ETA.");
+        Check(RemainingTime.Format(0.05, 8 * 24 * 3600) == "超过 7 天", "Absurd ETA must be bounded.");
+        double clock = 0;
+        var running = new RemainingTime(() => clock);
+        clock = 120; // Simulate a slow ffprobe before encoding begins.
+        Check(running.Update(0) == "计算中…", "Probe must not start the encode ETA clock.");
+        clock = 126;
+        Check(running.Update(0.1) == "计算中…", "First encoded frame must start at elapsed zero.");
+        clock = 136;
+        Check(running.Update(0.2) == "约 40 秒", "Probe time leaked into the remaining-time estimate.");
+        return Task.CompletedTask;
     }
 
     private static async Task EstimateAsync()
