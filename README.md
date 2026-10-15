@@ -12,7 +12,7 @@ Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.
 
 ## 安装与 FFmpeg
 
-交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。[新版 CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)已构建并在一次性 Windows runner 上安装、核对经典菜单注册与卸载；在该次运行的 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）。Windows 11「显示更多选项」的实际视觉菜单仍待实机验收。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
+交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。[新版 CI 第九轮](https://github.com/32ethers/SlimClip/actions/runs/38701051235)已构建并在一次性 Windows runner 上安装、核对经典菜单注册与卸载；要下载安装器，请打开[Windows EXE 工作流](https://github.com/32ethers/SlimClip/actions/workflows/windows-exe.yml)，选最新的绿色成功运行，在底部 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）；产物仅保留 7 天；若都过期，仓库维护者可在工作流页用「Run workflow」重新构建。Windows 11「显示更多选项」的实际视觉菜单仍待实机验收。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
 
 **公开安装包不含 FFmpeg/ffprobe**。首次处理视频时程序说明第三方 Gyan FFmpeg 的 GPLv3 许可，征得明确同意后让用户电脑直接从[上游](https://www.gyan.dev/ffmpeg/builds/)下载固定版本、核对 SHA-256 并保存到当前用户目录；也能在设置中选择已有工具目录。拒绝下载或校验失败不会动源视频。CI 虽使用上游 FFmpeg 进行测试，但不会上传它的二进制。
 

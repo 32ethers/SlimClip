@@ -4,7 +4,7 @@
 
 ## 安装（开发测试与未来发布）
 
-1. 从[已通过的第九轮 Actions 运行](https://github.com/32ethers/SlimClip/actions/runs/38701051235)取得名为 `SlimClip-EXE-Installer-NO-FFMPEG` 的产物（内含 `SlimClip-Setup.exe`）；务必核对运行成功、来源及之后更新的构建编号。未签名 EXE 可能触发 SmartScreen 警告；不要关闭系统保护或执行不明来源 EXE。用户不必安装 MSIX 测试证书。
+1. 从[Windows EXE 工作流](https://github.com/32ethers/SlimClip/actions/workflows/windows-exe.yml)选择最新的绿色成功运行，取得名为 `SlimClip-EXE-Installer-NO-FFMPEG` 的产物（内含 `SlimClip-Setup.exe`）；Actions 产物仅保留 7 天；若全部过期，仓库维护者可用工作流页的「Run workflow」重新构建；务必核对来源及构建编号。未签名 EXE 可能触发 SmartScreen 警告；不要关闭系统保护或执行不明来源 EXE。用户不必安装 MSIX 测试证书。
 2. 双击安装器，默认在当前用户 `%LOCALAPPDATA%\Programs\SlimClip` 安装，每用户注册 COM 经典子菜单和 Windows 卸载项，不改全局证书存储。Windows 11 对视频文件右键→**显示更多选项**→「压缩视频」；Windows 10 使用经典右键菜单。观察五个子项、单文件预估、多选排队；资源管理器可能需要重新登录后刷新菜单。CI 只检查 COM 注册/逻辑，不代替这一步实机观察。
 3. 首次压缩/预估时，如果未指定工具，SlimClip 会先显示 Gyan FFmpeg GPLv3 及下载来源，必须用户主动同意才从固定 HTTPS 地址下载并校验 SHA-256。用户也可在「设置」中指定已存在的 `ffmpeg.exe` + `ffprobe.exe` 目录。EXE 安装包和仓库不分发这两个程序；直接从上游下载失败、离线或拒绝授权时不会改动源片。
 4. 若曾安装旧私有 MSIX 试用版，先从「设置 → 应用」卸载旧版 `SlimClip.Menu`；先前手动信任的自签证书不会由新 EXE 自动移除。确认其指纹、其他应用并不依赖后，可在证书管理器按**精确指纹**单独删除；不要批量清理证书。
