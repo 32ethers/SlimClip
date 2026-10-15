@@ -280,7 +280,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f release-assets/SlimClip-Setup.exe
-          sha256sum release-assets/SlimClip-Setup.exe > release-assets/SHA256SUMS.txt
+          (cd release-assets && sha256sum SlimClip-Setup.exe > SHA256SUMS.txt)
           gh release create "$GITHUB_REF_NAME" \
             release-assets/SlimClip-Setup.exe release-assets/SHA256SUMS.txt \
             --verify-tag --prerelease \
