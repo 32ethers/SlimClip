@@ -29,7 +29,12 @@ try {
     foreach ($name in @('SlimClip.exe','SlimClipCommand.dll','LICENSE.txt','unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDir $name) -PathType Leaf)) { throw "Installed file missing: $name" }
     }
-    if (@(Find-UninstallEntries).Count -ne 1) { throw 'Settings app uninstall registration missing or duplicated.' }
+    if (@(Find-UninstallEntries).Count -ne 1) {
+        $candidates = @(Get-ChildItem -LiteralPath $uninstallRoot -ErrorAction Stop | Where-Object {
+            $_.PSChildName -match '266761BB-3916-45F4-9E9F-6E880324331E' -or $_.GetValue('DisplayName') -like 'SlimClip*'
+        } | ForEach-Object { $_.PSChildName + ': ' + $_.GetValue('DisplayName') })
+        throw ('Settings app uninstall registration missing or duplicated. Matching entries: ' + ($candidates -join '; '))
+    }
     $included = @(Get-ChildItem -LiteralPath $installDir -Recurse -File | Where-Object { $_.Name -in @('ffmpeg.exe', 'ffprobe.exe') })
     if ($included.Count) { throw 'Installer unlawfully bundled FFmpeg/ffprobe binaries.' }
     if (-not (Test-Path -LiteralPath $verb) -or -not (Test-Path -LiteralPath $com)) { throw 'Classic Explorer COM registration missing.' }

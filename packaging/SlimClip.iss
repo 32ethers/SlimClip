@@ -22,6 +22,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
 UninstallDisplayIcon={app}\SlimClip.exe
+UninstallDisplayName=SlimClip
 CloseApplications=yes
 RestartApplications=no
 ChangesAssociations=yes
