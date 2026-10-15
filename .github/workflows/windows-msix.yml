@@ -151,4 +151,5 @@ jobs:
 
       - name: Explain skipped upload in public repository
         if: ${{ github.event.repository.private != true && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[private-test-msix]')) }}
-        run: Write-Host '::notice::Public repository: test MSIX containing FFmpeg is deliberately not uploaded.'
+        run: |
+          Write-Host '::notice::Public repository: test MSIX containing FFmpeg is deliberately not uploaded.'
