@@ -3,8 +3,8 @@
 //   $env:SLIMCLIP_FFMPEG_DIR = "C:\\path\\to\\ffmpeg\\bin"
 //   dotnet run --project tests/SlimClip.Tests.csproj --configuration Release
 // Alternatively: dotnet run --project tests/SlimClip.Tests.csproj -- --ffmpeg-dir "C:\\path\\to\\ffmpeg\\bin"
-// ffmpeg.exe and ffprobe.exe are copied into this test executable's bin directory because
-// production MediaTools resolves both exclusively against AppContext.BaseDirectory.
+// ffmpeg.exe and ffprobe.exe are copied into this test executable's bin directory only
+// for the standalone integration-test fallback; production never searches that directory.
 // All media fixtures and outputs live in a uniquely named temporary directory, never in a user's video directory.
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -18,6 +18,8 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--upstream-download-smoke")
+            return await DownloadSmokeAsync();
         try
         {
             string? toolDirectory = args.Length == 0 ? Environment.GetEnvironmentVariable("SLIMCLIP_FFMPEG_DIR") :
@@ -54,6 +56,46 @@ internal static class Program
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 { Console.Error.WriteLine("Could not remove test temporary directory: " + _root + ": " + error.Message); }
             }
+        }
+    }
+
+    // Separate runner-only check of the actual first-use HTTPS, pinned-hash and ZIP path.
+    // Deliberately downloads from upstream a second time; no binary leaves the runner.
+    private static async Task<int> DownloadSmokeAsync()
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" ||
+            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RUNNER_TEMP")))
+        {
+            Console.Error.WriteLine("Upstream download smoke is restricted to disposable GitHub runners.");
+            return 1;
+        }
+        string tools = FfmpegSetup.ToolsDirectory;
+        if (Directory.Exists(tools))
+        {
+            Console.Error.WriteLine("Refusing to touch pre-existing user FFmpeg tools: " + tools);
+            return 1;
+        }
+        try
+        {
+            await FfmpegSetup.InstallAsync(new Progress<string>(_ => { }), CancellationToken.None);
+            Check(FfmpegSetup.HasTools(tools), "Verified archive did not install the FFmpeg pair.");
+            Check(string.Equals(MediaTools.Executable("ffmpeg"), Path.Combine(tools, "ffmpeg.exe"),
+                StringComparison.OrdinalIgnoreCase), "Production must resolve only the user-local tool directory.");
+            Check((await Tool("ffprobe", "-version")).Contains("ffprobe version", StringComparison.OrdinalIgnoreCase),
+                "Upstream ffprobe failed to start after first-use download.");
+            Console.WriteLine("PASS: first-use HTTPS, pinned SHA-256, safe extraction and user-local FFmpeg launch.");
+            return 0;
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("FAIL first-use upstream download: " + error);
+            return 1;
+        }
+        finally
+        {
+            // Never touch an existing folder, a substituted junction, settings, source media or CI test bin.
+            if (Directory.Exists(tools) && (File.GetAttributes(tools) & FileAttributes.ReparsePoint) == 0)
+                Directory.Delete(tools, recursive: true);
         }
     }
 

@@ -68,6 +68,12 @@ jobs:
           dotnet run --project tests/SlimClip.Tests.csproj --configuration Release
           if ($LASTEXITCODE -ne 0) { throw 'Video-engine integration tests failed' }
 
+      - name: Verify first-use upstream FFmpeg download and extraction
+        id: download
+        run: |
+          dotnet run --project tests/SlimClip.Tests.csproj --configuration Release -- --upstream-download-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'First-use FFmpeg acquisition failed' }
+
       - name: Locate or install Inno Setup compiler on disposable runner
         id: inno
         run: |
@@ -150,6 +156,7 @@ jobs:
           STEP_FFMPEG: ${{ steps.ffmpeg.outcome }}
           STEP_SMOKE: ${{ steps.smoke.outcome }}
           STEP_ENGINE: ${{ steps.engine.outcome }}
+          STEP_DOWNLOAD: ${{ steps.download.outcome }}
           STEP_INNO: ${{ steps.inno.outcome }}
           STEP_PACKAGE: ${{ steps.package.outcome }}
           STEP_INSTALL: ${{ steps.install.outcome }}
@@ -179,6 +186,7 @@ jobs:
             run = $env:GITHUB_RUN_ID; commit = $env:GITHUB_SHA
             steps = [ordered]@{
               ffmpeg = $env:STEP_FFMPEG; smoke = $env:STEP_SMOKE; engine = $env:STEP_ENGINE
+              download = $env:STEP_DOWNLOAD
               inno = $env:STEP_INNO; package = $env:STEP_PACKAGE
               install = $env:STEP_INSTALL; installer = $env:STEP_INSTALLER
             }

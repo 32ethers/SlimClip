@@ -1,6 +1,6 @@
 # SlimClip（开发中）
 
-Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.265 MP4、队列/托盘与安全保存。Windows 11 菜单预计位于**「显示更多选项」**，不承诺第一层新式菜单。[DESIGN.md](DESIGN.md) 是当前需求；新版 EXE 安装及实机菜单**尚待验证**。
+Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.265 MP4、队列/托盘与安全保存。Windows 11 菜单预计位于**「显示更多选项」**，不承诺第一层新式菜单。[DESIGN.md](DESIGN.md) 是当前需求；新版 EXE 在隔离 CI 安装／卸载已通过，Windows 11 实机菜单**尚待验证**。
 
 ## 功能
 
@@ -12,16 +12,16 @@ Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.
 
 ## 安装与 FFmpeg
 
-计划交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。目前打包及 Windows 11「显示更多选项」中的实际菜单仍在验收中，**不能把旧版 MSIX 测试结果算作新版 EXE 通过**。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
+交付**每用户 EXE 安装包**，免 MSIX 和测试证书；卸载通过 Windows「设置 → 应用」。[新版 CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38700214441)已构建并在一次性 Windows runner 上安装、核对经典菜单注册与卸载；在该次运行的 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）。Windows 11「显示更多选项」的实际视觉菜单仍待实机验收。未签名 EXE 仍可能出现 Windows SmartScreen 提示；不要从不可信来源下载安装器。详见[安装与卸载](packaging/INSTALL.md)和[实机验收清单](tests/windows11-acceptance.md)。用户电脑不需要 Visual Studio 或 .NET 8 SDK。
 
 **公开安装包不含 FFmpeg/ffprobe**。首次处理视频时程序说明第三方 Gyan FFmpeg 的 GPLv3 许可，征得明确同意后让用户电脑直接从[上游](https://www.gyan.dev/ffmpeg/builds/)下载固定版本、核对 SHA-256 并保存到当前用户目录；也能在设置中选择已有工具目录。拒绝下载或校验失败不会动源视频。CI 虽使用上游 FFmpeg 进行测试，但不会上传它的二进制。
 
 ## 测试状态
 
-此前 [CI 第十一轮](https://github.com/32ethers/SlimClip/actions/runs/38607273909)验证了 11 项引擎集成测试、FFmpeg 烟测、COM 子菜单自测及**旧 MSIX** 在一次性 Windows runner 上安装卸载。新版 EXE 的 CI、真实 Windows 11 经典菜单、多选/托盘交互及人工音画同步检查**尚未完成**，需要单独报告结果。运行 FFmpeg 烟测：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1`；独立 .NET 测试需要 `SLIMCLIP_FFMPEG_DIR` 指向 FFmpeg/ffprobe 目录，执行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`。
+[新版 CI 第八轮](https://github.com/32ethers/SlimClip/actions/runs/38700214441)通过 11 项视频引擎集成测试、FFmpeg 烟测、C++ COM 自测、FFmpeg-free EXE 构建及 Windows runner 的每用户安装／注册／卸载检查。**真实 Windows 11 Explorer 菜单、首次上游下载、多选/托盘交互及人工音画同步仍需单独验收**；CI 的注册检查不能冒充视觉验收。运行 FFmpeg 烟测：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/ffmpeg-smoke.ps1`；独立 .NET 测试需要 `SLIMCLIP_FFMPEG_DIR` 指向 FFmpeg/ffprobe 目录，执行 `dotnet run --project tests/SlimClip.Tests.csproj --configuration Release`。
 
 ## 许可与公开仓库
 
-SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。FFmpeg **不是 MIT**，是用户从上游直接获取的独立 GPLv3 软件；将来如果打算捆绑公开分发二进制，仍须核查[完整对应源码与分发义务](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已改回 public；发现旧版含 FFmpeg 的私有 MSIX 产物曾短暂公开，已通过[一次性清理运行](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，公开 Actions 产物列表现为 0；无法撤回此前可能被下载的副本。当前没有 `ci-diagnostics` 分支，公开 CI 由匿名 API 直接查看。
+SlimClip 自有源码采用 [MIT 许可证](LICENSE)（版权所有 © 2026 32ethers）。FFmpeg **不是 MIT**，是用户从上游直接获取的独立 GPLv3 软件；将来如果打算捆绑公开分发二进制，仍须核查[完整对应源码与分发义务](packaging/FFMPEG-SOURCE-AUDIT.md)。仓库已改回 public；发现旧版含 FFmpeg 的私有 MSIX 产物曾短暂公开，已通过[一次性清理运行](https://github.com/32ethers/SlimClip/actions/runs/38697950751)删除，该旧产物 ID 现返回 404；当前 Actions 产物仅有新上传的 FFmpeg-free EXE，无法撤回旧产物此前可能被下载的副本。当前没有 `ci-diagnostics` 分支，公开 CI 由匿名 API 直接查看。
 
 经典菜单设计依据：[微软创建快捷菜单处理程序](https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers)。
