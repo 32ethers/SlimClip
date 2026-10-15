@@ -1,34 +1,44 @@
-# SlimClip（预览版 / Preview）
+# SlimClip
 
-![胶片与向内压缩箭头的 SlimClip 标志](assets/SlimClip.png)
+![SlimClip：胶片、播放按钮与向内的压缩箭头](assets/SlimClip.png)
 
-Windows 10/11 视频压缩工具：**传统资源管理器右键子菜单**、H.265 MP4、队列/托盘与安全保存。Windows 11 菜单预计位于**「显示更多选项」**，不承诺第一层新式菜单。[DESIGN.md](DESIGN.md) 是当前需求；新版 EXE 在隔离 CI 安装／卸载已通过，Windows 11 实机菜单**尚待验证**。
+**在 Windows 资源管理器里，右键就能压缩视频。**
 
-## 功能
+手机、相机或录屏生成的视频太大，上传、分享和存放都不方便；为了压缩它们，又不想研究 FFmpeg 命令行，或冒险覆盖原片。SlimClip 把常用操作做成三个画质档位：选视频、选档位，等待生成 H.265/MP4 文件。它可以先预估大小、批量排队，并在处理时显示进度和大致剩余时间。
 
-- 胶片、播放与向内箭头的原创图标用于窗口、托盘、EXE、安装器和右键入口；视频右键「压缩视频」→「低 / 中 / 高 / 预估大小 / 设置」；多选文件排入同一顺序队列，窗口关闭后继续在系统托盘处理。
-- **English / 简体中文**：界面在「设置 → 语言」选择跟随系统、English 或简体中文，切换后退出托盘中的现有进程并重启生效。右键菜单按 Windows 用户显示语言独立呈现英语/简体中文；繁体中文及其他未支持语言回退英语。安装向导提供两种语言。
-- 唯一输出格式为 **H.265 视频 + MP4**。默认 CRF 33/720p、28/1080p、23/原分辨率，按原比例缩放，不放大。
-- 压缩与三档预估显示进度条及按当前编码速度推算的**预计剩余时间**；刚开始显示「计算中」，不同档位速度会变，时间仅为粗略推算，收尾校验不承诺准确倒计时。预估分别编码中间最多 8 秒，最终大小仅是**粗略估计**。
-- AAC 音轨直接复制、其他音轨转 AAC；尽量保留全部音轨及语言标签。字幕/额外轨道不能在首版保留，另存前明确征求同意，替换原片时拒绝丢弃。
-- 默认同目录另存，结果不缩小则跳过；可在设置选择有备份恢复保护的替换。不会随安装/卸载清理用户视频。
+适用 **Windows 10/11 x64**。Windows 11 的入口在右键菜单的 **「显示更多选项」** 里，而不是第一层新式菜单。程序和安装包目前是**未签名预览版**；Windows 11 菜单外观、授权弹窗和音画同步仍待实机验收。
 
-## 安装与 FFmpeg
+## 下载和安装
 
-交付**每用户 EXE 安装包**，无需 MSIX 或测试证书；卸载通过 Windows「设置 → 应用」。发布后优先在 [Releases](https://github.com/32ethers/SlimClip/releases) 获取对应预览版安装器及 SHA-256；也可从[Windows EXE 工作流](https://github.com/32ethers/SlimClip/actions/workflows/windows-exe.yml)最新成功运行的 Artifacts 下载 `SlimClip-EXE-Installer-NO-FFMPEG`（内含 `SlimClip-Setup.exe`）；产物保留 7 天，过期可由维护者重新运行工作流。未签名 EXE 可能触发 SmartScreen，请核对下载来源。无需 Visual Studio 或 .NET 8 SDK。详见[安装与卸载](packaging/INSTALL.md)及[实机验收清单](tests/windows11-acceptance.md)。
+1. 从 [v1.1.0-preview.1 发布页](https://github.com/32ethers/SlimClip/releases/tag/v1.1.0-preview.1)下载 `SlimClip-Setup.exe`；可同时下载 `SHA256SUMS.txt` [核对文件哈希](packaging/INSTALL.md)。安装器未签名，Windows 可能提示 SmartScreen；请先确认下载地址，不要为了安装而关闭系统防护。
+2. 双击安装器，选择简体中文或 English，按向导安装。它只为当前用户安装，不需要安装 .NET SDK、MSIX 或测试证书。
+3. **不需要事先下载 FFmpeg 才能安装。**如果电脑已有同一目录中的 `ffmpeg.exe` 和 `ffprobe.exe`，SlimClip 可以使用它们；否则在第一次压缩或预估时，它会先征求同意，再由你的电脑从上游下载并校验。安装器和源码仓库都**不包含 FFmpeg 二进制**。拒绝下载时也不会改动原视频。
 
-**安装包与源码仓库均不附带 FFmpeg/ffprobe**。首次压缩或预估前，程序告知第三方 [Gyan FFmpeg](https://www.gyan.dev/ffmpeg/builds/) 的来源及 GPLv3 许可；用户明确同意后，由其电脑直接从固定上游地址下载固定版本、校验 SHA-256 并保存到当前用户目录；也可在设置中指定已有工具目录。未指定时优先使用已授权下载到用户目录的工具，之后按 `PATH` 顺序寻找**同一绝对目录**下成对的 `ffmpeg.exe` 与 `ffprobe.exe`；如果仍找不到，才询问是否下载。不会从工作目录解析相对程序名，也不通过 `cmd.exe` 执行。PATH 中已有工具由用户负责确认来源与对应许可；刚修改 PATH 时须重启 SlimClip，必要时重新登录使 Explorer 继承新环境。拒绝或校验失败不会改动源视频。
+## 怎么用
 
-## English quick start
+1. 在资源管理器里选中一个视频，右键选择 **「压缩视频」**；Windows 11 需先点 **「显示更多选项」**。想先看看结果大约有多大，选 **「预估大小」**；这个功能一次只针对一个视频。
+2. 选择压缩档位：
 
-Download the unsigned `SlimClip-Setup.exe` from [Releases](https://github.com/32ethers/SlimClip/releases) (or a successful [Windows build](https://github.com/32ethers/SlimClip/actions/workflows/windows-exe.yml)). On Windows 11, use **right-click → Show more options → Compress Video**; select a preset or estimate. In **Settings → Language**, choose Automatic, English, or 简体中文, then fully quit and restart SlimClip to apply a change. SlimClip first uses a selected FFmpeg folder, then already authorized user-local tools, then a complete `ffmpeg.exe`/`ffprobe.exe` pair found in one absolute `PATH` entry. Only if none exists will it ask for consent to download FFmpeg directly from upstream; the installer contains no FFmpeg. See the [bilingual preview notes](packaging/RELEASE_NOTES.md) and [manual checklist](tests/windows11-acceptance.md); Windows 11 visual/audio acceptance is still pending.
+   | 档位 | 适合什么时候选 | 默认最高高度 |
+   | --- | --- | --- |
+   | **低** | 更在意文件大小，可以接受画质下降 | 720p |
+   | **中** | 想在体积和画质间折中；不确定时先试这个 | 1080p |
+   | **高** | 更在意画质，文件不一定会明显变小 | 保持原分辨率 |
 
-## 测试状态
+   程序不会把低分辨率视频放大。预估值和剩余时间只是参考，具体结果取决于源视频。输出固定为 **H.265 视频、MP4 文件**；播放设备也需要支持 H.265。
+3. 首次处理若提示缺少 FFmpeg，可以选择同意从上游下载，或打开 **「设置」** 指定已有工具目录。电脑的 `PATH` 中若已有同一绝对目录下成对的 `ffmpeg.exe`、`ffprobe.exe`，程序也会自动找到它们；刚修改 `PATH` 后请完全退出程序并重启，必要时重新登录 Windows。
+4. 在窗口里查看每项进度、状态和大致剩余时间。选中多个视频后选择压缩档位，它们会依次排队；关闭窗口只会收起到系统托盘，**托盘菜单中的「退出」**才会结束程序。需要中止当前任务，可点窗口中的 **「取消当前任务」**。
 
-[Windows CI 第十四轮](https://github.com/32ethers/SlimClip/actions/runs/38718474279)已通过 14 项测试（引擎、双语资源、PATH 工具优先级、剩余时间及慢探测）、FFmpeg 下载校验、COM 子菜单与图标自测、无 FFmpeg 的 EXE 构建，以及两种安装语言参数的安装／注册／卸载冒烟。**Windows 11「显示更多选项」中的实际菜单、首次授权界面、多选/托盘交互及音画同步尚未获人工实机确认**；CI 注册检查不等于视觉验收。测试步骤见[安装说明](packaging/INSTALL.md)。
+默认在原视频所在文件夹**另存新文件**，保留原片；如果结果不比原片小，默认不保存这个结果。你可以在 **「设置」** 调整三个档位、改为成功后替换原片、指定 FFmpeg 文件夹，或切换 English / 简体中文。更改界面语言后，需要从托盘完全退出并重新启动；右键菜单的语言则跟随 Windows 的显示语言。
 
-## 许可与公开仓库
+## 使用前要知道
 
-SlimClip 自有代码采用 [MIT 许可证](LICENSE)（© 2026 32ethers）；程序提供下载的 Gyan FFmpeg 构建是独立的 GPLv3 软件，用户自行指定的其他构建则以其实际许可为准，**不能把 FFmpeg 误称为 MIT 或无需关注其许可**。当前安装包不再分发 FFmpeg 二进制，因此没有因该安装包分发 GPL 二进制而产生的相应再分发义务；首次使用仍告知来源与许可。未来如自行捆绑分发，须先核查[对应源码和许可义务](packaging/FFMPEG-SOURCE-AUDIT.md)。旧版含 FFmpeg 的 MSIX 测试产物曾短暂公开，已[删除](https://github.com/32ethers/SlimClip/actions/runs/38697950751)，但无法撤回此前可能被下载的副本。
+- 音频会随视频保留：AAC 音轨直接复制，其他音轨转换为 AAC；尽量保留多音轨和语言标签。**字幕等额外轨道目前不能保留**：另存前会提示，替换原片时则拒绝这样做。重要视频请先用副本试用并检查播放效果。
+- 预览版虽通过 [Windows CI：14 项测试、安装与卸载检查](https://github.com/32ethers/SlimClip/actions/runs/38724166612)，但自动测试**不能代替** Windows 11 上的真实菜单显示、授权操作、队列/托盘体验和音画同步验收。请参考[实机验收清单](tests/windows11-acceptance.md)。
+- 安装包不附带 FFmpeg。SlimClip 自有代码采用 [MIT](LICENSE)；可选择下载的第三方 Gyan FFmpeg 构建采用 GPLv3，自己提供的版本则按其实际许可使用。详见[安装、卸载与工具说明](packaging/INSTALL.md)。
 
-经典菜单设计依据：[微软创建快捷菜单处理程序](https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers)。
+## English
+
+**SlimClip compresses videos from the Windows 10/11 Explorer context menu** without requiring FFmpeg commands. It is an **unsigned preview**. Download `SlimClip-Setup.exe` from the [release](https://github.com/32ethers/SlimClip/releases/tag/v1.1.0-preview.1), install it for your user account, then right-click a video. On Windows 11 choose **Show more options → Compress Video**; on Windows 10 use the classic context menu. Choose **Low** (smaller), **Medium** (balanced), **High** (quality), or **Estimate size** for a single file. The default saves a new H.265/MP4 file beside the original; selecting several videos queues them.
+
+The installer contains **no FFmpeg**. SlimClip can use an existing folder or a complete `ffmpeg.exe`/`ffprobe.exe` pair on `PATH`; otherwise it asks before downloading a pinned build directly from upstream. Use **Settings → Language** to choose English or Simplified Chinese, then fully quit and restart. See the [installation guide](packaging/INSTALL.md) and [manual acceptance checklist](tests/windows11-acceptance.md). Actual Windows 11 appearance and audio/video sync still need hands-on testing.
